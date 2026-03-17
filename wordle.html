@@ -1148,7 +1148,7 @@ function buildKeyboard() {
     const rows = [
         ['Q','W','E','R','T','Y','U','I','O','P'],
         ['A','S','D','F','G','H','J','K','L'],
-        ['ENTER','Z','X','C','V','B','N','M','DEL']
+        ['ENTER','Z','X','C','V','B','N','M','DEL','CLEAR']
     ];
     rows.forEach(row => {
         const rowDiv = document.createElement('div');
@@ -1158,7 +1158,7 @@ function buildKeyboard() {
             btn.className = 'key' + (key.length > 1 ? ' wide' : '');
             btn.textContent = key;
             btn.id = `key-${key}`;
-            btn.setAttribute('aria-label', key === 'DEL' ? 'Delete' : key === 'ENTER' ? 'Submit guess' : `Letter ${key}`);
+            btn.setAttribute('aria-label', key === 'DEL' ? 'Delete last letter' : key === 'ENTER' ? 'Submit guess' : key === 'CLEAR' ? 'Clear entire row' : `Letter ${key}`);
             btn.onclick = () => handleKey(key);
             rowDiv.appendChild(btn);
         });
@@ -1170,7 +1170,17 @@ function buildKeyboard() {
 function handleKey(key) {
     if (gameOver) return;
 
-    if (key === 'DEL') {
+    if (key === 'CLEAR') {
+        // Clear entire current row — one tap instead of multiple backspaces
+        while (currentCol > 0) {
+            currentCol--;
+            const cell = document.getElementById(`cell-${currentRow}-${currentCol}`);
+            cell.textContent = '';
+            cell.className = 'cell';
+            cell.setAttribute('aria-label', `Row ${currentRow + 1} Column ${currentCol + 1} Empty`);
+        }
+        showMessage('Row cleared');
+    } else if (key === 'DEL') {
         if (currentCol > 0) {
             currentCol--;
             const cell = document.getElementById(`cell-${currentRow}-${currentCol}`);
