@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fox Arcade</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.header {
+    text-align: center;
+    padding: 30px 20px 10px;
+}
+.header h1 {
+    font-size: 36px;
+    color: #f4845f;
+    text-shadow: 2px 2px 0 #16213e;
+}
+.header p {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin-top: 5px;
+}
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px;
+    width: 100%;
+    max-width: 400px;
+}
+.game-card {
+    background: #16213e;
+    border: 2px solid #0f3460;
+    border-radius: 12px;
+    padding: 16px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: #eee;
+    display: block;
+}
+.game-card:hover, .game-card:active {
+    border-color: #f4845f;
+    background: #1a2744;
+    transform: scale(1.02);
+}
+.game-card .emoji { font-size: 32px; margin-bottom: 4px; }
+.game-card .name { font-size: 18px; font-weight: bold; color: #f4845f; }
+.game-card .desc { font-size: 11px; color: #7f8c8d; margin-top: 4px; }
+.game-card .stat { font-size: 12px; color: #e94560; margin-top: 8px; }
+.footer {
+    padding: 20px;
+    text-align: center;
+    color: #333;
+    font-size: 11px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Fox Arcade</h1>
+    <p>A fox's own playground</p>
+</div>
+
+<div class="games-grid">
+    <a href="wordle.html" class="game-card" aria-label="Play Fox Wordle">
+        <div class="emoji">W</div>
+        <div class="name">Fox Wordle</div>
+        <div class="desc">Guess the 5-letter word in 6 tries</div>
+        <div class="stat" id="wordle-stat"></div>
+    </a>
+
+    <a href="canvas.html" class="game-card" aria-label="Play Fox Canvas">
+        <div class="emoji">C</div>
+        <div class="name">Fox Canvas</div>
+        <div class="desc">Tap to draw pixel art</div>
+        <div class="stat" id="canvas-stat"></div>
+    </a>
+
+    <a href="memory.html" class="game-card" aria-label="Play Fox Memory">
+        <div class="emoji">M</div>
+        <div class="name">Fox Memory</div>
+        <div class="desc">Match pairs of cards</div>
+        <div class="stat" id="memory-stat"></div>
+    </a>
+
+    <a href="dungeon.html" class="game-card" aria-label="Play Fox Mystery Dungeon">
+        <div class="emoji">D</div>
+        <div class="name">Fox Dungeon</div>
+        <div class="desc">Explore, fight, survive</div>
+        <div class="stat" id="dungeon-stat"></div>
+    </a>
+
+    <a href="chess.html" class="game-card" aria-label="Play Fox Chess">
+        <div class="emoji">K</div>
+        <div class="name">Fox Chess</div>
+        <div class="desc">Play against the AI</div>
+        <div class="stat" id="chess-stat"></div>
+    </a>
+
+    <a href="sudoku.html" class="game-card" aria-label="Play Fox Sudoku">
+        <div class="emoji">9</div>
+        <div class="name">Fox Sudoku</div>
+        <div class="desc">Fill the grid with logic</div>
+        <div class="stat" id="sudoku-stat"></div>
+    </a>
+</div>
+
+<div class="footer">built with love by cow & fox</div>
+
+<script>
+// Load stats from localStorage
+const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
+if (stats.wordle) {
+    const w = stats.wordle;
+    document.getElementById('wordle-stat').textContent =
+        `Streak: ${w.streak || 0} | Played: ${w.played || 0} | Best: ${w.best || '-'}`;
+}
+if (stats.canvas) {
+    document.getElementById('canvas-stat').textContent =
+        `Artworks: ${stats.canvas.count || 0}`;
+}
+if (stats.memory) {
+    const m = stats.memory;
+    document.getElementById('memory-stat').textContent =
+        `Played: ${m.played || 0} | Best: ${m.bestMoves || '-'} moves`;
+}
+if (stats.dungeon) {
+    const d = stats.dungeon;
+    document.getElementById('dungeon-stat').textContent =
+        `Best: F${d.bestFloor || 0} | Played: ${d.played || 0} | Enemies: ${d.totalEnemies || 0}`;
+}
+if (stats.chess) {
+    const c = stats.chess;
+    document.getElementById('chess-stat').textContent =
+        `Won: ${c.won || 0} | Lost: ${c.lost || 0} | Drawn: ${c.drawn || 0}`;
+}
+if (stats.sudoku) {
+    const s = stats.sudoku;
+    document.getElementById('sudoku-stat').textContent =
+        `Won: ${s.won || 0} | Played: ${s.played || 0}`;
+}
+</script>
+
+</body>
+</html>

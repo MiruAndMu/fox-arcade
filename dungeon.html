@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fox Mystery Dungeon</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.nav { padding: 10px; width: 100%; }
+.nav a { color: #f4845f; text-decoration: none; font-size: 14px; }
+h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
+
+.hud {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    margin: 5px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.hud .hp { color: #e94560; }
+.hud .floor { color: #f4845f; }
+.hud .atk { color: #ffcc00; }
+.hud .shield { color: #87ceeb; }
+.hud .gold { color: #ffd700; }
+
+.log {
+    width: 90%;
+    max-width: 400px;
+    height: 44px;
+    overflow: hidden;
+    text-align: center;
+    font-size: 13px;
+    color: #7f8c8d;
+    margin: 4px 0;
+    line-height: 22px;
+}
+.log div { color: #ccc; }
+
+.dungeon-container {
+    margin: 6px 0;
+    border: 2px solid #0f3460;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.dungeon {
+    display: grid;
+    gap: 0;
+}
+.tile {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    border: 0.5px solid #111;
+    user-select: none;
+}
+.tile-wall { background: #0a0a1a; color: #222; }
+.tile-floor { background: #16213e; }
+.tile-player { background: #1a2744; color: #f4845f; font-size: 22px; }
+.tile-enemy { background: #16213e; color: #e94560; }
+.tile-boss { background: #16213e; color: #ff0000; font-size: 24px; }
+.tile-item { background: #16213e; color: #ffd700; }
+.tile-stairs { background: #16213e; color: #00ff00; }
+.tile-explored { background: #111833; }
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(3, 48px);
+    gap: 4px;
+    margin: 8px 0;
+}
+.ctrl-btn {
+    border: 2px solid #0f3460;
+    border-radius: 6px;
+    background: #16213e;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ctrl-btn:active { background: #1a2744; border-color: #f4845f; }
+.ctrl-btn.action {
+    background: #0f3460;
+    font-size: 12px;
+}
+
+.actions-row {
+    display: flex;
+    gap: 6px;
+    margin: 4px 0;
+}
+.act-btn {
+    padding: 10px 16px;
+    border: 2px solid #0f3460;
+    border-radius: 6px;
+    background: #16213e;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    cursor: pointer;
+}
+.act-btn.shield-active { border-color: #87ceeb; background: #0f2a4a; }
+.act-btn:active { background: #1a2744; }
+
+.game-over {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+.game-over.show { display: flex; }
+.game-over h2 { color: #f4845f; font-size: 28px; margin-bottom: 10px; }
+.game-over p { color: #7f8c8d; margin: 4px 0; font-size: 14px; }
+.game-over button {
+    margin-top: 16px;
+    padding: 12px 24px;
+    border: 2px solid #f4845f;
+    border-radius: 6px;
+    background: #16213e;
+    color: #f4845f;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.stats { font-size: 11px; color: #333; margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">Back to Arcade</a></div>
+<h1>Fox Mystery Dungeon</h1>
+
+<div class="hud">
+    <span class="hp" id="hud-hp" aria-label="Health">HP: 20/20</span>
+    <span class="floor" id="hud-floor" aria-label="Floor">F1</span>
+    <span class="atk" id="hud-atk" aria-label="Attack power">ATK: 3</span>
+    <span class="shield" id="hud-shield" aria-label="Shield charges">Shield: 1</span>
+    <span class="gold" id="hud-gold" aria-label="Gold collected">Gold: 0</span>
+</div>
+
+<div class="log" id="log" aria-live="polite">
+    <div>A fox enters the dungeon...</div>
+</div>
+
+<div class="dungeon-container">
+    <div class="dungeon" id="dungeon"></div>
+</div>
+
+<div class="controls">
+    <div></div>
+    <button class="ctrl-btn" id="btn-up" aria-label="Move up" onclick="move(0,-1)">UP</button>
+    <div></div>
+    <button class="ctrl-btn" id="btn-left" aria-label="Move left" onclick="move(-1,0)">LEFT</button>
+    <button class="ctrl-btn" id="btn-wait" aria-label="Wait one turn" onclick="wait()">WAIT</button>
+    <button class="ctrl-btn" id="btn-right" aria-label="Move right" onclick="move(1,0)">RIGHT</button>
+    <div></div>
+    <button class="ctrl-btn" id="btn-down" aria-label="Move down" onclick="move(0,1)">DOWN</button>
+    <div></div>
+</div>
+
+<div class="actions-row">
+    <button class="act-btn" id="btn-shield" aria-label="Activate shield blocks next attack" onclick="activateShield()">Shield</button>
+    <button class="act-btn" id="btn-attack" aria-label="Attack nearby enemy" onclick="attackNearby()">Attack</button>
+    <button class="act-btn" id="btn-look" aria-label="Look around describe surroundings" onclick="lookAround()">Look</button>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="game-over" id="game-over">
+    <h2 id="go-title">Game Over</h2>
+    <p id="go-floor">Reached: Floor 1</p>
+    <p id="go-gold">Gold: 0</p>
+    <p id="go-enemies">Enemies defeated: 0</p>
+    <button aria-label="Play again" onclick="newGame()">Play Again</button>
+</div>
+
+<script>
+// --- Config ---
+const MAP_W = 9;
+const MAP_H = 9;
+const ENEMIES_PER_FLOOR = 3;
+const ITEMS_PER_FLOOR = 2;
+
+// --- Symbols ---
+const SYM = {
+    wall: '#',
+    floor: '.',
+    player: '@',
+    enemy: 'E',
+    boss: 'B',
+    potion: '+',
+    gold: '$',
+    sword: '!',
+    shieldItem: 'O',
+    stairs: '>',
+};
+
+const ENEMY_NAMES = ['Rat', 'Bat', 'Slime', 'Goblin', 'Snake', 'Spider', 'Ghost', 'Wolf', 'Demon', 'Dragon'];
+
+// --- State ---
+let map = [];
+let visible = [];
+let player = { x: 1, y: 1, hp: 20, maxHp: 20, atk: 3, shield: 1, shieldActive: false, gold: 0 };
+let enemies = [];
+let items = [];
+let stairsPos = { x: 0, y: 0 };
+let floor = 1;
+let enemiesDefeated = 0;
+let turn = 0;
+let gameActive = true;
+let logs = [];
+
+// --- Map generation (simple rooms + corridors) ---
+function generateMap() {
+    map = [];
+    for (let y = 0; y < MAP_H; y++) {
+        map[y] = [];
+        for (let x = 0; x < MAP_W; x++) {
+            map[y][x] = '#';
+        }
+    }
+
+    // Carve rooms
+    const rooms = [];
+    const numRooms = 3 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < numRooms; i++) {
+        const rw = 3 + Math.floor(Math.random() * 2);
+        const rh = 3 + Math.floor(Math.random() * 2);
+        const rx = 1 + Math.floor(Math.random() * (MAP_W - rw - 2));
+        const ry = 1 + Math.floor(Math.random() * (MAP_H - rh - 2));
+        for (let y = ry; y < ry + rh && y < MAP_H - 1; y++) {
+            for (let x = rx; x < rx + rw && x < MAP_W - 1; x++) {
+                map[y][x] = '.';
+            }
+        }
+        rooms.push({ cx: Math.floor(rx + rw / 2), cy: Math.floor(ry + rh / 2) });
+    }
+
+    // Connect rooms with corridors
+    for (let i = 1; i < rooms.length; i++) {
+        const a = rooms[i - 1];
+        const b = rooms[i];
+        let x = a.cx, y = a.cy;
+        while (x !== b.cx) {
+            if (x >= 0 && x < MAP_W && y >= 0 && y < MAP_H) map[y][x] = '.';
+            x += x < b.cx ? 1 : -1;
+        }
+        while (y !== b.cy) {
+            if (x >= 0 && x < MAP_W && y >= 0 && y < MAP_H) map[y][x] = '.';
+            y += y < b.cy ? 1 : -1;
+        }
+    }
+
+    // Reset visibility
+    visible = [];
+    for (let y = 0; y < MAP_H; y++) {
+        visible[y] = [];
+        for (let x = 0; x < MAP_W; x++) {
+            visible[y][x] = false;
+        }
+    }
+
+    // Place player in first room
+    player.x = rooms[0].cx;
+    player.y = rooms[0].cy;
+
+    // Place stairs in last room
+    const lastRoom = rooms[rooms.length - 1];
+    stairsPos = { x: lastRoom.cx, y: lastRoom.cy };
+
+    // Place enemies
+    enemies = [];
+    for (let i = 0; i < ENEMIES_PER_FLOOR + Math.floor(floor / 2); i++) {
+        const pos = randomFloor();
+        if (pos) {
+            const baseHp = 3 + floor * 2;
+            const baseAtk = 1 + Math.floor(floor / 2);
+            const nameIdx = Math.min(floor - 1 + i, ENEMY_NAMES.length - 1);
+            enemies.push({
+                x: pos.x, y: pos.y,
+                hp: baseHp + Math.floor(Math.random() * 3),
+                atk: baseAtk + Math.floor(Math.random() * 2),
+                name: ENEMY_NAMES[Math.min(nameIdx, ENEMY_NAMES.length - 1)],
+                isBoss: false,
+            });
+        }
+    }
+
+    // Boss every 3 floors
+    if (floor % 3 === 0) {
+        const bpos = randomFloor();
+        if (bpos) {
+            enemies.push({
+                x: bpos.x, y: bpos.y,
+                hp: 10 + floor * 3,
+                atk: 2 + floor,
+                name: floor >= 9 ? 'Dragon' : floor >= 6 ? 'Demon' : 'Wolf',
+                isBoss: true,
+            });
+        }
+    }
+
+    // Place items
+    items = [];
+    for (let i = 0; i < ITEMS_PER_FLOOR; i++) {
+        const pos = randomFloor();
+        if (pos) {
+            const types = ['potion', 'gold', 'gold', 'sword', 'shieldItem'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            items.push({ x: pos.x, y: pos.y, type });
+        }
+    }
+
+    updateVisibility();
+}
+
+function randomFloor() {
+    for (let tries = 0; tries < 50; tries++) {
+        const x = 1 + Math.floor(Math.random() * (MAP_W - 2));
+        const y = 1 + Math.floor(Math.random() * (MAP_H - 2));
+        if (map[y][x] === '.' && !(x === player.x && y === player.y) &&
+            !(x === stairsPos.x && y === stairsPos.y) &&
+            !enemies.some(e => e.x === x && e.y === y) &&
+            !items.some(i => i.x === x && i.y === y)) {
+            return { x, y };
+        }
+    }
+    return null;
+}
+
+function updateVisibility() {
+    // Simple radius visibility
+    const radius = 3;
+    for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+            const nx = player.x + dx;
+            const ny = player.y + dy;
+            if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
+                if (Math.abs(dx) + Math.abs(dy) <= radius + 1) {
+                    visible[ny][nx] = true;
+                }
+            }
+        }
+    }
+}
+
+// --- Rendering ---
+function render() {
+    const dungeon = document.getElementById('dungeon');
+    dungeon.innerHTML = '';
+    dungeon.style.gridTemplateColumns = `repeat(${MAP_W}, 36px)`;
+
+    for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+
+            if (!visible[y][x]) {
+                tile.className = 'tile tile-wall';
+                tile.textContent = ' ';
+                tile.setAttribute('aria-label', 'Unknown');
+            } else if (x === player.x && y === player.y) {
+                tile.className = 'tile tile-player';
+                tile.textContent = '@';
+                tile.setAttribute('aria-label', 'Fox (you)');
+            } else {
+                const enemy = enemies.find(e => e.x === x && e.y === y);
+                const item = items.find(i => i.x === x && i.y === y);
+
+                if (enemy) {
+                    tile.className = enemy.isBoss ? 'tile tile-boss' : 'tile tile-enemy';
+                    tile.textContent = enemy.isBoss ? 'B' : 'E';
+                    tile.setAttribute('aria-label', `${enemy.name} HP:${enemy.hp} ATK:${enemy.atk}${enemy.isBoss ? ' BOSS' : ''}`);
+                } else if (x === stairsPos.x && y === stairsPos.y) {
+                    tile.className = 'tile tile-stairs';
+                    tile.textContent = '>';
+                    tile.setAttribute('aria-label', 'Stairs to next floor');
+                } else if (item) {
+                    tile.className = 'tile tile-item';
+                    const labels = { potion: 'Potion restores HP', gold: 'Gold coins', sword: 'Sword boosts ATK', shieldItem: 'Shield charge' };
+                    tile.textContent = item.type === 'potion' ? '+' : item.type === 'gold' ? '$' : item.type === 'sword' ? '!' : 'O';
+                    tile.setAttribute('aria-label', labels[item.type] || item.type);
+                } else if (map[y][x] === '#') {
+                    tile.className = 'tile tile-wall';
+                    tile.textContent = '#';
+                    tile.setAttribute('aria-label', 'Wall');
+                } else {
+                    tile.className = 'tile tile-explored';
+                    tile.textContent = '.';
+                    tile.setAttribute('aria-label', 'Empty floor');
+                }
+            }
+
+            dungeon.appendChild(tile);
+        }
+    }
+
+    // Update HUD
+    document.getElementById('hud-hp').textContent = `HP: ${player.hp}/${player.maxHp}`;
+    document.getElementById('hud-hp').setAttribute('aria-label', `Health ${player.hp} of ${player.maxHp}`);
+    document.getElementById('hud-floor').textContent = `F${floor}`;
+    document.getElementById('hud-floor').setAttribute('aria-label', `Floor ${floor}`);
+    document.getElementById('hud-atk').textContent = `ATK: ${player.atk}`;
+    document.getElementById('hud-atk').setAttribute('aria-label', `Attack power ${player.atk}`);
+    document.getElementById('hud-shield').textContent = `Shield: ${player.shield}`;
+    document.getElementById('hud-shield').setAttribute('aria-label', `Shield charges ${player.shield}`);
+    document.getElementById('hud-gold').textContent = `Gold: ${player.gold}`;
+    document.getElementById('hud-gold').setAttribute('aria-label', `Gold ${player.gold}`);
+
+    // Shield button state
+    const shieldBtn = document.getElementById('btn-shield');
+    if (player.shieldActive) {
+        shieldBtn.classList.add('shield-active');
+        shieldBtn.setAttribute('aria-label', 'Shield is ACTIVE will block next hit');
+    } else {
+        shieldBtn.classList.remove('shield-active');
+        shieldBtn.setAttribute('aria-label', `Activate shield ${player.shield} charges left`);
+    }
+}
+
+// --- Actions ---
+function move(dx, dy) {
+    if (!gameActive) return;
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+
+    if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) return;
+    if (map[ny][nx] === '#') {
+        addLog("Bonk! That's a wall.");
+        return;
+    }
+
+    // Check for enemy
+    const enemy = enemies.find(e => e.x === nx && e.y === ny);
+    if (enemy) {
+        // Attack enemy by moving into them
+        combat(enemy);
+        endTurn();
+        return;
+    }
+
+    // Move
+    player.x = nx;
+    player.y = ny;
+    updateVisibility();
+
+    // Check for items
+    const itemIdx = items.findIndex(i => i.x === nx && i.y === ny);
+    if (itemIdx >= 0) {
+        pickupItem(items[itemIdx]);
+        items.splice(itemIdx, 1);
+    }
+
+    // Check for stairs
+    if (nx === stairsPos.x && ny === stairsPos.y) {
+        addLog(`Descending to floor ${floor + 1}...`);
+        floor++;
+        generateMap();
+        render();
+        addLog(`Floor ${floor}. The dungeon grows darker.`);
+        return;
+    }
+
+    endTurn();
+}
+
+function combat(enemy) {
+    // Player attacks
+    const dmg = player.atk + Math.floor(Math.random() * 2);
+    enemy.hp -= dmg;
+    addLog(`Hit ${enemy.name} for ${dmg}! ${enemy.hp > 0 ? `(${enemy.hp} HP left)` : 'Defeated!'}`);
+
+    if (enemy.hp <= 0) {
+        enemies.splice(enemies.indexOf(enemy), 1);
+        enemiesDefeated++;
+        const goldDrop = 1 + Math.floor(Math.random() * 3) + (enemy.isBoss ? 5 : 0);
+        player.gold += goldDrop;
+        addLog(`${enemy.name} dropped ${goldDrop} gold!`);
+    }
+}
+
+function endTurn() {
+    turn++;
+
+    // Enemies act
+    enemies.forEach(enemy => {
+        const dx = Math.sign(player.x - enemy.x);
+        const dy = Math.sign(player.y - enemy.y);
+
+        // If adjacent, attack
+        if (Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y) <= 1) {
+            if (player.shieldActive) {
+                player.shieldActive = false;
+                addLog(`Shield blocked ${enemy.name}'s attack!`);
+            } else {
+                const edmg = enemy.atk + Math.floor(Math.random() * 2);
+                player.hp -= edmg;
+                addLog(`${enemy.name} hits you for ${edmg}!`);
+            }
+        } else {
+            // Move toward player (simple chase)
+            const nx = enemy.x + dx;
+            const ny = enemy.y + dy;
+            if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H &&
+                map[ny][nx] === '.' &&
+                !enemies.some(e => e !== enemy && e.x === nx && e.y === ny) &&
+                !(nx === stairsPos.x && ny === stairsPos.y)) {
+                enemy.x = nx;
+                enemy.y = ny;
+            }
+        }
+    });
+
+    // Check death
+    if (player.hp <= 0) {
+        player.hp = 0;
+        gameActive = false;
+        showGameOver(false);
+    }
+
+    render();
+}
+
+function activateShield() {
+    if (!gameActive) return;
+    if (player.shield <= 0) {
+        addLog("No shield charges left!");
+        return;
+    }
+    if (player.shieldActive) {
+        addLog("Shield already active!");
+        return;
+    }
+    player.shield--;
+    player.shieldActive = true;
+    addLog("Shield activated! Next hit will be blocked.");
+    render();
+}
+
+function attackNearby() {
+    if (!gameActive) return;
+    // Find adjacent enemy
+    const adjacent = enemies.find(e =>
+        Math.abs(e.x - player.x) + Math.abs(e.y - player.y) <= 1
+    );
+    if (adjacent) {
+        combat(adjacent);
+        endTurn();
+    } else {
+        addLog("No enemy nearby to attack.");
+    }
+}
+
+function lookAround() {
+    if (!gameActive) return;
+    const nearby = [];
+
+    // Check all visible tiles
+    for (let dy = -3; dy <= 3; dy++) {
+        for (let dx = -3; dx <= 3; dx++) {
+            const nx = player.x + dx;
+            const ny = player.y + dy;
+            if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && visible[ny][nx]) {
+                const enemy = enemies.find(e => e.x === nx && e.y === ny);
+                const item = items.find(i => i.x === nx && i.y === ny);
+                const dist = Math.abs(dx) + Math.abs(dy);
+                const dir = getDirection(dx, dy);
+                if (enemy) nearby.push(`${enemy.name}(HP:${enemy.hp}) ${dir}`);
+                if (item) nearby.push(`${item.type} ${dir}`);
+                if (nx === stairsPos.x && ny === stairsPos.y) nearby.push(`Stairs ${dir}`);
+            }
+        }
+    }
+
+    if (nearby.length > 0) {
+        addLog("Nearby: " + nearby.join(", "));
+    } else {
+        addLog("Nothing interesting nearby.");
+    }
+}
+
+function getDirection(dx, dy) {
+    if (dx === 0 && dy === 0) return 'here';
+    const h = dx > 0 ? 'east' : dx < 0 ? 'west' : '';
+    const v = dy > 0 ? 'south' : dy < 0 ? 'north' : '';
+    return v + (v && h ? '-' : '') + h;
+}
+
+function pickupItem(item) {
+    switch (item.type) {
+        case 'potion':
+            const heal = 5 + Math.floor(floor / 2);
+            player.hp = Math.min(player.maxHp, player.hp + heal);
+            addLog(`Potion! Healed ${heal} HP. (${player.hp}/${player.maxHp})`);
+            break;
+        case 'gold':
+            const amt = 2 + Math.floor(Math.random() * 4);
+            player.gold += amt;
+            addLog(`Found ${amt} gold!`);
+            break;
+        case 'sword':
+            player.atk += 1;
+            addLog(`Sword! ATK increased to ${player.atk}!`);
+            break;
+        case 'shieldItem':
+            player.shield += 1;
+            addLog(`Shield charge! Now have ${player.shield}.`);
+            break;
+    }
+}
+
+function wait() {
+    if (!gameActive) return;
+    addLog("You wait...");
+    endTurn();
+}
+
+function addLog(msg) {
+    logs.unshift(msg);
+    if (logs.length > 10) logs.pop();
+    const logEl = document.getElementById('log');
+    logEl.innerHTML = logs.slice(0, 2).map(l => `<div>${l}</div>`).join('');
+}
+
+function showGameOver(won) {
+    document.getElementById('game-over').classList.add('show');
+    document.getElementById('go-title').textContent = won ? 'Victory!' : 'The fox falls...';
+    document.getElementById('go-floor').textContent = `Reached: Floor ${floor}`;
+    document.getElementById('go-gold').textContent = `Gold: ${player.gold}`;
+    document.getElementById('go-enemies').textContent = `Enemies defeated: ${enemiesDefeated}`;
+    updateHighScore();
+}
+
+function updateHighScore() {
+    const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
+    if (!stats.dungeon) stats.dungeon = { played: 0, bestFloor: 0, totalGold: 0, totalEnemies: 0 };
+    stats.dungeon.played++;
+    stats.dungeon.totalGold += player.gold;
+    stats.dungeon.totalEnemies += enemiesDefeated;
+    if (floor > stats.dungeon.bestFloor) stats.dungeon.bestFloor = floor;
+    localStorage.setItem('fox-arcade-stats', JSON.stringify(stats));
+}
+
+function newGame() {
+    document.getElementById('game-over').classList.remove('show');
+    player = { x: 1, y: 1, hp: 20, maxHp: 20, atk: 3, shield: 1, shieldActive: false, gold: 0 };
+    enemies = [];
+    items = [];
+    floor = 1;
+    enemiesDefeated = 0;
+    turn = 0;
+    gameActive = true;
+    logs = [];
+    addLog("A fox enters the dungeon...");
+    generateMap();
+    render();
+}
+
+// --- Keyboard controls ---
+document.addEventListener('keydown', (e) => {
+    switch (e.key) {
+        case 'ArrowUp': case 'w': move(0, -1); break;
+        case 'ArrowDown': case 's': move(0, 1); break;
+        case 'ArrowLeft': case 'a': move(-1, 0); break;
+        case 'ArrowRight': case 'd': move(1, 0); break;
+        case ' ': wait(); break;
+        case 'q': activateShield(); break;
+        case 'e': attackNearby(); break;
+        case 'l': lookAround(); break;
+    }
+});
+
+// --- Init ---
+generateMap();
+render();
+
+// Show stats
+const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
+const d = stats.dungeon || {};
+document.getElementById('stats').textContent =
+    `Best: F${d.bestFloor || 0} | Played: ${d.played || 0} | Enemies: ${d.totalEnemies || 0}`;
+</script>
+
+</body>
+</html>

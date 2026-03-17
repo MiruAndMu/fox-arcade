@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fox Memory</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.nav { padding: 10px; width: 100%; }
+.nav a { color: #f4845f; text-decoration: none; font-size: 14px; }
+h1 { color: #f4845f; font-size: 28px; margin: 5px 0 10px; }
+
+.info {
+    text-align: center;
+    margin: 5px 0;
+    font-size: 14px;
+    color: #7f8c8d;
+}
+.info span { color: #f4845f; font-weight: bold; }
+
+.message {
+    height: 28px;
+    font-size: 18px;
+    color: #e94560;
+    margin: 8px 0;
+    text-align: center;
+}
+
+.board {
+    display: grid;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 10px;
+}
+.card {
+    width: 72px;
+    height: 72px;
+    border: 2px solid #0f3460;
+    border-radius: 8px;
+    background: #16213e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    cursor: pointer;
+    transition: all 0.3s;
+    user-select: none;
+}
+.card.face-down {
+    background: #0f3460;
+}
+.card.face-down::after {
+    content: '?';
+    font-size: 28px;
+    color: #1a1a2e;
+}
+.card.face-up {
+    background: #16213e;
+    border-color: #f4845f;
+}
+.card.matched {
+    background: #538d4e;
+    border-color: #538d4e;
+    opacity: 0.8;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+}
+.action-btn {
+    padding: 10px 18px;
+    border: 2px solid #0f3460;
+    border-radius: 6px;
+    background: #16213e;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.stats {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin: 10px 0;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+
+<div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">Back to Arcade</a></div>
+<h1>Fox Memory</h1>
+
+<div class="info">
+    Moves: <span id="moves">0</span> | Pairs: <span id="pairs">0</span> / <span id="total-pairs">0</span>
+</div>
+
+<div class="message" id="message" aria-live="polite"></div>
+
+<div class="board" id="board"></div>
+
+<div class="actions">
+    <button class="action-btn" aria-label="New game easy 4x3" onclick="startGame(4, 3)">Easy (4x3)</button>
+    <button class="action-btn" aria-label="New game medium 4x4" onclick="startGame(4, 4)">Medium (4x4)</button>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<script>
+// Symbols for matching (using simple text characters for accessibility)
+const SYMBOLS = [
+    'FOX', 'COW', 'SUN', 'MOON',
+    'STAR', 'LEAF', 'DROP', 'FIRE',
+    'FISH', 'BIRD', 'GEM', 'KEY'
+];
+
+let cards = [];
+let flipped = [];
+let matched = 0;
+let moves = 0;
+let totalPairs = 0;
+let locked = false;
+let cols = 4;
+let rows = 3;
+
+function startGame(c, r) {
+    cols = c;
+    rows = r;
+    totalPairs = (cols * rows) / 2;
+    matched = 0;
+    moves = 0;
+    flipped = [];
+    locked = false;
+
+    document.getElementById('moves').textContent = '0';
+    document.getElementById('pairs').textContent = '0';
+    document.getElementById('total-pairs').textContent = totalPairs;
+    document.getElementById('message').textContent = '';
+
+    // Pick symbols and create pairs
+    const symbols = SYMBOLS.slice(0, totalPairs);
+    cards = [...symbols, ...symbols];
+
+    // Shuffle
+    for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+
+    // Build board
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    board.style.gridTemplateColumns = `repeat(${cols}, 72px)`;
+
+    cards.forEach((symbol, i) => {
+        const card = document.createElement('div');
+        card.className = 'card face-down';
+        card.id = `card-${i}`;
+        card.dataset.symbol = symbol;
+        card.dataset.index = i;
+        card.setAttribute('aria-label', `Card ${i + 1} face down`);
+        card.onclick = () => flipCard(i);
+        board.appendChild(card);
+    });
+}
+
+function flipCard(index) {
+    if (locked) return;
+    const card = document.getElementById(`card-${index}`);
+    if (card.classList.contains('face-up') || card.classList.contains('matched')) return;
+    if (flipped.length >= 2) return;
+
+    // Flip face up
+    card.classList.remove('face-down');
+    card.classList.add('face-up');
+    card.textContent = card.dataset.symbol;
+    card.setAttribute('aria-label', `Card ${index + 1} showing ${card.dataset.symbol}`);
+    flipped.push(index);
+
+    if (flipped.length === 2) {
+        moves++;
+        document.getElementById('moves').textContent = moves;
+        checkMatch();
+    }
+}
+
+function checkMatch() {
+    locked = true;
+    const [i1, i2] = flipped;
+    const card1 = document.getElementById(`card-${i1}`);
+    const card2 = document.getElementById(`card-${i2}`);
+
+    if (card1.dataset.symbol === card2.dataset.symbol) {
+        // Match!
+        card1.classList.remove('face-up');
+        card1.classList.add('matched');
+        card1.setAttribute('aria-label', `Card ${i1 + 1} matched ${card1.dataset.symbol}`);
+        card2.classList.remove('face-up');
+        card2.classList.add('matched');
+        card2.setAttribute('aria-label', `Card ${i2 + 1} matched ${card2.dataset.symbol}`);
+        matched++;
+        document.getElementById('pairs').textContent = matched;
+        document.getElementById('message').textContent = `Matched: ${card1.dataset.symbol}!`;
+        flipped = [];
+        locked = false;
+
+        if (matched === totalPairs) {
+            document.getElementById('message').textContent = `You won in ${moves} moves!`;
+            updateStats(moves);
+        }
+    } else {
+        // No match — flip back after delay
+        document.getElementById('message').textContent = `${card1.dataset.symbol} and ${card2.dataset.symbol} — no match`;
+        setTimeout(() => {
+            card1.classList.remove('face-up');
+            card1.classList.add('face-down');
+            card1.textContent = '';
+            card1.setAttribute('aria-label', `Card ${i1 + 1} face down`);
+            card2.classList.remove('face-up');
+            card2.classList.add('face-down');
+            card2.textContent = '';
+            card2.setAttribute('aria-label', `Card ${i2 + 1} face down`);
+            flipped = [];
+            locked = false;
+            document.getElementById('message').textContent = '';
+        }, 1200);
+    }
+}
+
+function updateStats(moves) {
+    const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
+    if (!stats.memory) stats.memory = { played: 0, bestMoves: null };
+    stats.memory.played++;
+    if (!stats.memory.bestMoves || moves < stats.memory.bestMoves) {
+        stats.memory.bestMoves = moves;
+    }
+    localStorage.setItem('fox-arcade-stats', JSON.stringify(stats));
+    showStats();
+}
+
+function showStats() {
+    const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
+    const m = stats.memory || {};
+    document.getElementById('stats').textContent =
+        `Played: ${m.played || 0} | Best: ${m.bestMoves || '-'} moves`;
+}
+
+// Init — start with easy
+showStats();
+startGame(4, 3);
+</script>
+
+</body>
+</html>
