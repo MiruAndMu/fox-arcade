@@ -130,7 +130,7 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     justify-content: center;
     z-index: 100;
 }
-.game-over.show { display: flex; }
+.game-over.show { display: flex; pointer-events: all; }
 .game-over h2 { color: #f4845f; font-size: 28px; margin-bottom: 10px; }
 .game-over p { color: #7f8c8d; margin: 4px 0; font-size: 14px; }
 .game-over button {
@@ -194,7 +194,7 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     <p id="go-floor">Reached: Floor 1</p>
     <p id="go-gold">Gold: 0</p>
     <p id="go-enemies">Enemies defeated: 0</p>
-    <button aria-label="Play again" onclick="newGame()">Play Again</button>
+    <button aria-label="New Game — Play Again — Restart" onclick="newGame()">New Game</button>
 </div>
 
 <script>
@@ -328,7 +328,7 @@ function generateMap() {
     for (let i = 0; i < ITEMS_PER_FLOOR; i++) {
         const pos = randomFloor();
         if (pos) {
-            const types = ['potion', 'gold', 'gold', 'sword', 'shieldItem'];
+            const types = ['potion', 'potion', 'gold', 'sword', 'shieldItem'];
             const type = types[Math.floor(Math.random() * types.length)];
             items.push({ x: pos.x, y: pos.y, type });
         }
@@ -478,6 +478,10 @@ function move(dx, dy) {
     if (nx === stairsPos.x && ny === stairsPos.y) {
         addLog(`Descending to floor ${floor + 1}...`);
         floor++;
+        // Rest between floors — heal 30% of max HP
+        const restHeal = Math.max(3, Math.floor(player.maxHp * 0.3));
+        player.hp = Math.min(player.maxHp, player.hp + restHeal);
+        addLog(`The fox rests briefly. Healed ${restHeal} HP. (${player.hp}/${player.maxHp})`);
         generateMap();
         render();
         addLog(`Floor ${floor}. The dungeon grows darker.`);

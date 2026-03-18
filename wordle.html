@@ -1114,6 +1114,8 @@ let currentRow = 0;
 let currentCol = 0;
 let gameOver = false;
 let guesses = [];
+let rejectedWords = [];  // words tried that weren't in word list
+let messageTimer = null;
 
 // Pick daily word (seeded by date)
 function getDailyWord() {
@@ -1179,7 +1181,7 @@ function handleKey(key) {
             cell.className = 'cell';
             cell.setAttribute('aria-label', `Row ${currentRow + 1} Column ${currentCol + 1} Empty`);
         }
-        showMessage('Row cleared');
+        showMessage('Row cleared', 3000);
     } else if (key === 'DEL') {
         if (currentCol > 0) {
             currentCol--;
@@ -1208,7 +1210,11 @@ function submitGuess() {
 
     // Check if it's a real word (simple check: is it in our list?)
     if (!WORDS.includes(guess.toLowerCase())) {
-        showMessage('Not in word list');
+        if (!rejectedWords.includes(guess)) {
+            rejectedWords.push(guess);
+        }
+        const rejectList = rejectedWords.join(', ');
+        showMessage(`Not in word list. Already tried: ${rejectList}`, 15000);
         return;
     }
 
@@ -1280,8 +1286,15 @@ function scoreGuess(guess, answer) {
     return result;
 }
 
-function showMessage(msg) {
+function showMessage(msg, autoClearMs) {
+    if (messageTimer) clearTimeout(messageTimer);
     document.getElementById('message').textContent = msg;
+    if (autoClearMs) {
+        messageTimer = setTimeout(() => {
+            document.getElementById('message').textContent = '';
+            messageTimer = null;
+        }, autoClearMs);
+    }
 }
 
 function updateStats(won, tries) {
