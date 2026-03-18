@@ -17,13 +17,23 @@ body {
 }
 .nav { padding: 10px; width: 100%; }
 .nav a { color: #f4845f; text-decoration: none; font-size: 14px; }
-h1 { color: #f4845f; font-size: 28px; margin: 5px 0 10px; }
+.nav a:hover { color: #ffa07a; text-shadow: 0 0 8px #f4845f88; }
+
+h1 {
+    color: #f4845f;
+    font-size: 28px;
+    margin: 5px 0 4px;
+    text-shadow: 0 0 20px #f4845f44;
+    letter-spacing: 3px;
+}
+
 .message {
-    height: 24px;
-    font-size: 16px;
-    color: #e94560;
+    height: 28px;
+    font-size: 15px;
+    color: #ffd700;
     margin: 5px 0;
     text-align: center;
+    font-weight: bold;
 }
 
 /* Grid */
@@ -42,7 +52,7 @@ h1 { color: #f4845f; font-size: 28px; margin: 5px 0 10px; }
     width: 52px;
     height: 52px;
     border: 2px solid #0f3460;
-    border-radius: 4px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -50,25 +60,39 @@ h1 { color: #f4845f; font-size: 28px; margin: 5px 0 10px; }
     font-weight: bold;
     text-transform: uppercase;
     background: #16213e;
-    transition: all 0.3s;
+    transition: border-color 0.15s;
 }
-.cell.filled { border-color: #555; }
-.cell.correct { background: #538d4e; border-color: #538d4e; color: #fff; }
-.cell.present { background: #b59f3b; border-color: #b59f3b; color: #fff; }
-.cell.absent { background: #3a3a4c; border-color: #3a3a4c; color: #888; }
+.cell.filled { border-color: #f4845f66; }
+.cell.correct {
+    background: #538d4e;
+    border-color: #6aad62;
+    color: #fff;
+    box-shadow: 0 0 12px #538d4e55;
+}
+.cell.present {
+    background: #b59f3b;
+    border-color: #d4ba46;
+    color: #fff;
+    box-shadow: 0 0 12px #b59f3b55;
+}
+.cell.absent {
+    background: #3a3a4c;
+    border-color: #3a3a4c;
+    color: #777;
+}
 
 /* Keyboard */
 .keyboard { margin: 10px 0; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .kb-row { display: flex; gap: 4px; }
 .key {
     padding: 12px 10px;
-    min-width: 30px;
-    height: 44px;
-    border: none;
-    border-radius: 4px;
-    background: #0f3460;
-    color: #eee;
-    font-size: 14px;
+    min-width: 32px;
+    height: 48px;
+    border: 1px solid #1a3a60;
+    border-radius: 6px;
+    background: linear-gradient(160deg, #1a2a4a 0%, #0f3460 100%);
+    color: #ccd;
+    font-size: 13px;
     font-weight: bold;
     font-family: 'Courier New', monospace;
     cursor: pointer;
@@ -76,19 +100,89 @@ h1 { color: #f4845f; font-size: 28px; margin: 5px 0 10px; }
     align-items: center;
     justify-content: center;
     text-transform: uppercase;
-    transition: all 0.2s;
+    transition: background 0.25s, color 0.25s, box-shadow 0.25s, transform 0.1s;
+    box-shadow: 0 2px 6px #00000066, inset 0 1px 0 #ffffff0d;
 }
-.key:active { transform: scale(0.95); }
-.key.wide { min-width: 56px; font-size: 12px; }
-.key.correct { background: #538d4e; }
-.key.present { background: #b59f3b; }
-.key.absent { background: #222; color: #555; }
+.key:hover { background: linear-gradient(160deg, #1e3258 0%, #1a3c70 100%); color: #fff; box-shadow: 0 2px 6px #00000066, 0 0 8px #f4845f22; }
+.key:active { transform: scale(0.91); box-shadow: 0 1px 2px #00000099; }
+.key.wide { min-width: 58px; font-size: 11px; padding: 12px 6px; }
+.key.correct {
+    background: linear-gradient(160deg, #4a7d44 0%, #538d4e 100%);
+    color: #fff;
+    border-color: #6aad62;
+    box-shadow: 0 2px 6px #00000066, 0 0 10px #538d4e44;
+}
+.key.present {
+    background: linear-gradient(160deg, #a08f35 0%, #b59f3b 100%);
+    color: #fff;
+    border-color: #d4ba46;
+    box-shadow: 0 2px 6px #00000066, 0 0 10px #b59f3b44;
+}
+.key.absent {
+    background: #1e1e2a;
+    color: #333;
+    border-color: #222;
+    box-shadow: none;
+}
 
 .stats {
     margin: 10px 0;
     font-size: 12px;
-    color: #7f8c8d;
+    color: #5a7a99;
     text-align: center;
+    letter-spacing: 1px;
+}
+
+/* --- Animations --- */
+@keyframes cellPop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.14); }
+    100% { transform: scale(1); }
+}
+
+@keyframes flipIn {
+    from { transform: perspective(300px) rotateX(0deg); }
+    to   { transform: perspective(300px) rotateX(-90deg); }
+}
+@keyframes flipOut {
+    from { transform: perspective(300px) rotateX(-90deg); }
+    to   { transform: perspective(300px) rotateX(0deg); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    15%, 55%, 95% { transform: translateX(-7px); }
+    35%, 75% { transform: translateX(7px); }
+}
+
+@keyframes winBounce {
+    0%   { transform: translateY(0); }
+    20%  { transform: translateY(-22px); }
+    40%  { transform: translateY(-6px); }
+    60%  { transform: translateY(-15px); }
+    80%  { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes msgZoom {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes confettiFall {
+    0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    80%  { opacity: 0.8; }
+    100% { transform: translateY(80vh) rotate(600deg) scale(0.5); opacity: 0; }
+}
+
+.confetti-piece {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    animation: confettiFall linear forwards;
+    pointer-events: none;
+    z-index: 100;
 }
 </style>
 </head>
@@ -1113,8 +1207,9 @@ let answer = '';
 let currentRow = 0;
 let currentCol = 0;
 let gameOver = false;
+let isAnimating = false;
 let guesses = [];
-let rejectedWords = [];  // words tried that weren't in word list
+let rejectedWords = [];
 let messageTimer = null;
 
 // Pick daily word (seeded by date)
@@ -1170,10 +1265,9 @@ function buildKeyboard() {
 
 // --- Handle input ---
 function handleKey(key) {
-    if (gameOver) return;
+    if (gameOver || isAnimating) return;
 
     if (key === 'CLEAR') {
-        // Clear entire current row — one tap instead of multiple backspaces
         while (currentCol > 0) {
             currentCol--;
             const cell = document.getElementById(`cell-${currentRow}-${currentCol}`);
@@ -1181,7 +1275,7 @@ function handleKey(key) {
             cell.className = 'cell';
             cell.setAttribute('aria-label', `Row ${currentRow + 1} Column ${currentCol + 1} Empty`);
         }
-        showMessage('Row cleared', 3000);
+        showMessage('Row cleared', 2000);
     } else if (key === 'DEL') {
         if (currentCol > 0) {
             currentCol--;
@@ -1197,6 +1291,11 @@ function handleKey(key) {
         cell.textContent = key;
         cell.className = 'cell filled';
         cell.setAttribute('aria-label', `Row ${currentRow + 1} Column ${currentCol + 1} Letter ${key}`);
+        // Pop animation on letter entry
+        cell.style.animation = 'none';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            cell.style.animation = 'cellPop 0.12s ease-out';
+        }));
         currentCol++;
     }
 }
@@ -1208,55 +1307,122 @@ function submitGuess() {
         guess += document.getElementById(`cell-${currentRow}-${c}`).textContent;
     }
 
-    // Check if it's a real word (simple check: is it in our list?)
     if (!WORDS.includes(guess.toLowerCase())) {
         if (!rejectedWords.includes(guess)) {
             rejectedWords.push(guess);
         }
-        const rejectList = rejectedWords.join(', ');
-        showMessage(`Not in word list. Already tried: ${rejectList}`, 15000);
+        showMessage('Not in word list', 2000);
+        shakeRow(currentRow);
         return;
     }
 
     guesses.push(guess);
+    isAnimating = true;
 
-    // Score the guess
     const result = scoreGuess(guess, answer);
+    const row = currentRow;
 
-    // Update grid colors
-    for (let c = 0; c < 5; c++) {
-        const cell = document.getElementById(`cell-${currentRow}-${c}`);
-        cell.className = 'cell ' + result[c];
-        const status = result[c] === 'correct' ? 'Green' : result[c] === 'present' ? 'Yellow' : 'Gray';
-        cell.setAttribute('aria-label', `Row ${currentRow + 1} Column ${c + 1} Letter ${guess[c]} ${status}`);
-    }
-
-    // Update keyboard colors
-    for (let c = 0; c < 5; c++) {
-        const keyEl = document.getElementById(`key-${guess[c]}`);
-        if (keyEl) {
-            if (result[c] === 'correct') {
-                keyEl.className = 'key correct';
-            } else if (result[c] === 'present' && !keyEl.classList.contains('correct')) {
-                keyEl.className = 'key present';
-            } else if (result[c] === 'absent' && !keyEl.classList.contains('correct') && !keyEl.classList.contains('present')) {
-                keyEl.className = 'key absent';
-            }
+    revealRow(row, result, guess, () => {
+        isAnimating = false;
+        if (guess === answer) {
+            gameOver = true;
+            const msgs = ['', 'Genius!', 'Magnificent!', 'Impressive!', 'Splendid!', 'Great!', 'Phew!'];
+            showMessage(msgs[row + 1] || 'You got it!', null, true);
+            celebrateWin(row);
+            updateStats(true, row + 1);
+        } else if (row === 5) {
+            gameOver = true;
+            showMessage(`The word was ${answer}`);
+            updateStats(false, 0);
+        } else {
+            currentRow++;
+            currentCol = 0;
         }
+    });
+}
+
+// --- Reveal row with flip animation ---
+function revealRow(row, result, guess, onComplete) {
+    const FLIP_HALF = 230;
+    const STAGGER = 160;
+    let doneCount = 0;
+
+    for (let c = 0; c < 5; c++) {
+        const cell = document.getElementById(`cell-${row}-${c}`);
+        const delay = c * STAGGER;
+
+        setTimeout(() => {
+            cell.style.animation = `flipIn ${FLIP_HALF}ms ease-in forwards`;
+
+            setTimeout(() => {
+                // Midpoint: apply color class and update aria-label
+                cell.className = 'cell ' + result[c];
+                const status = result[c] === 'correct' ? 'Green' : result[c] === 'present' ? 'Yellow' : 'Gray';
+                cell.setAttribute('aria-label', `Row ${row + 1} Column ${c + 1} Letter ${guess[c]} ${status}`);
+                cell.style.animation = `flipOut ${FLIP_HALF}ms ease-out forwards`;
+
+                // Update keyboard key at reveal moment
+                const keyEl = document.getElementById(`key-${guess[c]}`);
+                if (keyEl) {
+                    if (result[c] === 'correct') {
+                        keyEl.className = 'key correct';
+                    } else if (result[c] === 'present' && !keyEl.classList.contains('correct')) {
+                        keyEl.className = 'key present';
+                    } else if (result[c] === 'absent' && !keyEl.classList.contains('correct') && !keyEl.classList.contains('present')) {
+                        keyEl.className = 'key absent';
+                    }
+                }
+
+                setTimeout(() => {
+                    cell.style.animation = '';
+                    doneCount++;
+                    if (doneCount === 5 && onComplete) onComplete();
+                }, FLIP_HALF);
+            }, FLIP_HALF);
+        }, delay);
+    }
+}
+
+// --- Shake row for invalid guess ---
+function shakeRow(row) {
+    for (let c = 0; c < 5; c++) {
+        const cell = document.getElementById(`cell-${row}-${c}`);
+        cell.style.animation = 'none';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            cell.style.animation = 'shake 0.4s ease';
+            setTimeout(() => { cell.style.animation = ''; }, 420);
+        }));
+    }
+}
+
+// --- Win celebration ---
+function celebrateWin(row) {
+    // Bounce each cell in winning row
+    for (let c = 0; c < 5; c++) {
+        const cell = document.getElementById(`cell-${row}-${c}`);
+        setTimeout(() => {
+            cell.style.animation = 'winBounce 0.7s ease';
+            setTimeout(() => { cell.style.animation = ''; }, 750);
+        }, c * 100 + 50);
     }
 
-    // Check win/loss
-    if (guess === answer) {
-        gameOver = true;
-        showMessage(`You got it in ${currentRow + 1}! The word was ${answer}`);
-        updateStats(true, currentRow + 1);
-    } else if (currentRow === 5) {
-        gameOver = true;
-        showMessage(`The word was ${answer}`);
-        updateStats(false, 0);
-    } else {
-        currentRow++;
-        currentCol = 0;
+    // Confetti burst
+    const colors = ['#f4845f', '#ffd700', '#538d4e', '#e94560', '#b59f3b', '#64b5f6', '#ff6b9d'];
+    const grid = document.getElementById('grid');
+    const rect = grid.getBoundingClientRect();
+
+    for (let i = 0; i < 50; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = (rect.left + Math.random() * rect.width) + 'px';
+        piece.style.top = (rect.top + Math.random() * (rect.height * 0.6)) + 'px';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDuration = (1.2 + Math.random() * 2) + 's';
+        piece.style.animationDelay = (Math.random() * 0.8) + 's';
+        if (Math.random() > 0.5) piece.style.borderRadius = '50%';
+        if (Math.random() > 0.7) { piece.style.width = '5px'; piece.style.height = '14px'; }
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 4000);
     }
 }
 
@@ -1286,12 +1452,19 @@ function scoreGuess(guess, answer) {
     return result;
 }
 
-function showMessage(msg, autoClearMs) {
+function showMessage(msg, autoClearMs, animated) {
     if (messageTimer) clearTimeout(messageTimer);
-    document.getElementById('message').textContent = msg;
+    const el = document.getElementById('message');
+    el.textContent = msg;
+    if (animated) {
+        el.style.animation = 'none';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            el.style.animation = 'msgZoom 0.3s ease-out';
+        }));
+    }
     if (autoClearMs) {
         messageTimer = setTimeout(() => {
-            document.getElementById('message').textContent = '';
+            el.textContent = '';
             messageTimer = null;
         }, autoClearMs);
     }
@@ -1315,8 +1488,9 @@ function updateStats(won, tries) {
 function showStats() {
     const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
     const w = stats.wordle || {};
+    const winRate = w.played ? Math.round((w.won || 0) / w.played * 100) : 0;
     document.getElementById('stats').textContent =
-        `Played: ${w.played || 0} | Won: ${w.won || 0} | Streak: ${w.streak || 0} | Best: ${w.best || '-'}`;
+        `played ${w.played || 0}  ·  won ${w.won || 0} (${winRate}%)  ·  streak ${w.streak || 0}  ·  best ${w.best || '—'}`;
 }
 
 // --- Keyboard input (for ADB keyevents) ---
