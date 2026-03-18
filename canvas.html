@@ -6,61 +6,178 @@
 <title>Fox Canvas</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
 body {
-    background: #1a1a2e;
+    background: #0d0d1a;
     color: #eee;
     font-family: 'Courier New', monospace;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding-bottom: 40px;
 }
-.nav { padding: 10px; width: 100%; }
-.nav a { color: #f4845f; text-decoration: none; font-size: 14px; }
-h1 { color: #f4845f; font-size: 28px; margin: 5px 0; }
 
+/* Nav */
+.nav {
+    padding: 12px 16px;
+    width: 100%;
+    border-bottom: 1px solid #1a1a3a;
+}
+.nav a {
+    color: #f4845f;
+    text-decoration: none;
+    font-size: 13px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.nav a:hover { opacity: 1; }
+
+/* Header */
+.header {
+    padding: 16px 0 8px;
+    text-align: center;
+}
+h1 {
+    color: #f4845f;
+    font-size: 26px;
+    letter-spacing: 2px;
+}
+.subtitle {
+    color: #2a3060;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-top: 3px;
+}
+
+/* Studio panel */
+.studio {
+    background: #111125;
+    border: 1px solid #1e1e3a;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 8px 16px;
+    width: min(420px, calc(100% - 32px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Toolbar */
 .toolbar {
     display: flex;
     gap: 8px;
-    margin: 8px 0;
-    flex-wrap: wrap;
+    width: 100%;
     justify-content: center;
 }
 .tool-btn {
-    padding: 8px 14px;
-    border: 2px solid #0f3460;
-    border-radius: 6px;
+    flex: 1;
+    max-width: 110px;
+    padding: 10px 8px 8px;
+    border: 2px solid #1e2040;
+    border-radius: 8px;
     background: #16213e;
-    color: #eee;
+    color: #778;
     font-family: 'Courier New', monospace;
-    font-size: 13px;
+    font-size: 11px;
     cursor: pointer;
-}
-.tool-btn.active { border-color: #f4845f; background: #1a2744; }
-
-.palette {
     display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 4px;
-    margin: 8px 0;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: 340px;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+}
+.tool-icon {
+    font-size: 20px;
+    line-height: 1;
+    display: block;
+}
+.tool-btn.active {
+    border-color: #f4845f;
+    background: #1e1e35;
+    color: #f4845f;
+    box-shadow: 0 0 12px rgba(244, 132, 95, 0.2);
+}
+.tool-btn:hover:not(.active) {
+    border-color: #2a2a50;
+    color: #aaa;
+}
+
+/* Palette */
+.palette-section {
+    width: 100%;
+}
+.section-label {
+    font-size: 9px;
+    color: #2a3060;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-align: center;
+}
+.palette {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
+    width: 100%;
+}
+.swatch-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
 }
 .color-btn {
-    width: 32px;
-    height: 32px;
-    border: 2px solid #333;
-    border-radius: 4px;
+    width: 100%;
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    border-radius: 5px;
     cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s;
+    position: relative;
+    display: block;
 }
-.color-btn.active { border-color: #fff; border-width: 3px; }
+.color-btn:hover {
+    transform: scale(1.12);
+    z-index: 1;
+}
+.color-btn.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 1px #f4845f, 0 0 10px rgba(244, 132, 95, 0.45);
+    transform: scale(1.15);
+    z-index: 2;
+}
+.color-name {
+    font-size: 7px;
+    color: #3a3a5a;
+    text-align: center;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 100%;
+}
+.color-btn.active ~ .color-name {
+    color: #f4845f;
+}
 
+/* Grid */
+.grid-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
 .grid-container {
-    margin: 8px 0;
-    display: inline-block;
-    border: 2px solid #0f3460;
+    border: 3px solid #1e2040;
     border-radius: 4px;
     background: #fff;
+    box-shadow:
+        0 0 0 1px rgba(244, 132, 95, 0.15),
+        0 4px 24px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
 }
 .pixel-grid {
     display: grid;
@@ -69,61 +186,209 @@ h1 { color: #f4845f; font-size: 28px; margin: 5px 0; }
 .pixel {
     width: 20px;
     height: 20px;
-    border: 0.5px solid #e0e0e0;
+    border-right: 0.5px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
     background: #ffffff;
-    cursor: pointer;
+    cursor: crosshair;
+}
+.pixel:hover {
+    filter: brightness(0.82);
+}
+.grid-meta {
+    font-size: 10px;
+    color: #2a3060;
+    letter-spacing: 1px;
 }
 
+/* Status */
+.status-bar {
+    font-size: 11px;
+    color: #f4845f;
+    min-height: 18px;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+/* Actions */
 .actions {
     display: flex;
     gap: 8px;
-    margin: 10px 0;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 .action-btn {
-    padding: 10px 18px;
-    border: 2px solid #0f3460;
-    border-radius: 6px;
+    padding: 9px 14px;
+    border: 2px solid #1e2040;
+    border-radius: 8px;
     background: #16213e;
-    color: #eee;
+    color: #778;
     font-family: 'Courier New', monospace;
-    font-size: 14px;
-    cursor: pointer;
-}
-.action-btn:active { background: #1a2744; }
-
-.size-info {
     font-size: 12px;
-    color: #7f8c8d;
-    margin: 5px 0;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+}
+.action-btn:hover {
+    border-color: #f4845f;
+    color: #f4845f;
+}
+.action-btn.gallery-open {
+    border-color: #ffd700;
+    color: #ffd700;
+    background: #1a1a28;
+}
+
+/* Gallery section */
+.gallery-section {
+    width: 100%;
+    display: none;
+    border-top: 1px solid #1e2040;
+    padding-top: 12px;
+}
+.gallery-section.open {
+    display: block;
+}
+.gallery-empty {
+    text-align: center;
+    color: #333;
+    font-size: 12px;
+    padding: 24px 0;
+    line-height: 1.8;
+}
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+}
+.gallery-item {
+    background: #0d0d1a;
+    border: 1px solid #1e2040;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: border-color 0.2s;
+}
+.gallery-item:hover {
+    border-color: #2a3060;
+}
+.gallery-thumb {
+    width: 80px;
+    height: 80px;
+    border: 1px solid #1e2040;
+    border-radius: 3px;
+    image-rendering: pixelated;
+    background: #fff;
+    display: block;
+}
+.gallery-meta {
+    font-size: 9px;
+    color: #3a3a5a;
+    text-align: center;
+    line-height: 1.6;
+}
+.gallery-meta .art-num {
+    color: #f4845f;
+    font-size: 10px;
+    font-weight: bold;
+}
+.gallery-btns {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+}
+.gb {
+    flex: 1;
+    padding: 5px 4px;
+    border: 1px solid #1e2040;
+    border-radius: 4px;
+    background: #111125;
+    color: #555;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+}
+.gb.load-btn:hover { border-color: #f4845f; color: #f4845f; }
+.gb.del-btn:hover  { border-color: #e94560; color: #e94560; }
+
+/* Footer */
+footer {
+    color: #222;
+    font-size: 11px;
+    margin-top: 20px;
+    letter-spacing: 1px;
 }
 </style>
 </head>
 <body>
 
-<div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">Back to Arcade</a></div>
-<h1>Fox Canvas</h1>
-
-<div class="toolbar" id="toolbar">
-    <button class="tool-btn active" id="tool-pen" aria-label="Pen tool" onclick="setTool('pen')">Pen</button>
-    <button class="tool-btn" id="tool-eraser" aria-label="Eraser tool" onclick="setTool('eraser')">Eraser</button>
-    <button class="tool-btn" id="tool-fill" aria-label="Fill tool" onclick="setTool('fill')">Fill</button>
+<div class="nav">
+    <a href="index.html" aria-label="Back to Fox Arcade">← Back to Arcade</a>
 </div>
 
-<div class="palette" id="palette"></div>
-
-<div class="size-info" id="size-info">16 x 16</div>
-
-<div class="grid-container">
-    <div class="pixel-grid" id="pixel-grid"></div>
+<div class="header">
+    <h1>Fox Canvas</h1>
+    <div class="subtitle">✦ pixel art studio ✦</div>
 </div>
 
-<div class="actions">
-    <button class="action-btn" aria-label="Clear canvas" onclick="clearCanvas()">Clear</button>
-    <button class="action-btn" aria-label="Save artwork" onclick="saveArt()">Save</button>
-    <button class="action-btn" aria-label="New canvas" onclick="newCanvas()">New</button>
+<div class="studio">
+
+    <!-- Toolbar -->
+    <div class="toolbar" id="toolbar">
+        <button class="tool-btn active" id="tool-pen" aria-label="Pen tool" onclick="setTool('pen')">
+            <span class="tool-icon">✏</span>
+            <span>PEN</span>
+        </button>
+        <button class="tool-btn" id="tool-eraser" aria-label="Eraser tool" onclick="setTool('eraser')">
+            <span class="tool-icon">⌫</span>
+            <span>ERASE</span>
+        </button>
+        <button class="tool-btn" id="tool-fill" aria-label="Fill tool" onclick="setTool('fill')">
+            <span class="tool-icon">▣</span>
+            <span>FILL</span>
+        </button>
+    </div>
+
+    <!-- Palette -->
+    <div class="palette-section">
+        <div class="section-label">color palette</div>
+        <div class="palette" id="palette"></div>
+    </div>
+
+    <!-- Canvas Grid -->
+    <div class="grid-wrapper">
+        <div class="grid-container">
+            <div class="pixel-grid" id="pixel-grid"></div>
+        </div>
+        <div class="grid-meta" id="size-info">16 × 16</div>
+    </div>
+
+    <!-- Status -->
+    <div class="status-bar" id="save-msg"></div>
+
+    <!-- Actions -->
+    <div class="actions">
+        <button class="action-btn" aria-label="Clear canvas" onclick="clearCanvas()">⊘ CLEAR</button>
+        <button class="action-btn" aria-label="Save artwork" onclick="saveArt()">⊕ SAVE</button>
+        <button class="action-btn" aria-label="New canvas" onclick="newCanvas()">◎ NEW</button>
+        <button class="action-btn" id="gallery-toggle" aria-label="Show artwork gallery" onclick="toggleGallery()">◈ GALLERY</button>
+    </div>
+
+    <!-- Gallery -->
+    <div class="gallery-section" id="gallery-section">
+        <div class="section-label" style="margin-bottom:12px">saved artworks</div>
+        <div id="gallery-content"></div>
+    </div>
+
 </div>
 
-<div class="size-info" id="save-msg"></div>
+<footer>built with love by cow &amp; fox</footer>
 
 <script>
 const GRID_SIZE = 16;
@@ -135,22 +400,48 @@ const COLORS = [
     '#538d4e', '#b59f3b', '#87ceeb', '#ffd700'
 ];
 
+const COLOR_NAMES = {
+    '#000000': 'Black',  '#ffffff': 'White',
+    '#ff0000': 'Red',    '#ff6600': 'Orange',
+    '#ffcc00': 'Amber',  '#ffff00': 'Yellow',
+    '#00cc00': 'Green',  '#00ff00': 'Lime',
+    '#0066ff': 'Blue',   '#0000ff': 'Navy',
+    '#6600cc': 'Purple', '#cc00ff': 'Violet',
+    '#ff66cc': 'Pink',   '#996633': 'Brown',
+    '#666666': 'Gray',   '#cccccc': 'Silver',
+    '#1a1a2e': 'Den',    '#f4845f': 'Fox',
+    '#e94560': 'Ember',  '#0f3460': 'Ocean',
+    '#538d4e': 'Forest', '#b59f3b': 'Gold',
+    '#87ceeb': 'Sky',    '#ffd700': 'Star'
+};
+
 let currentColor = '#000000';
 let currentTool = 'pen';
-let grid = [];
+let pixelGrid = [];
 let isDrawing = false;
+let galleryOpen = false;
 
 // Build palette
 function buildPalette() {
     const palette = document.getElementById('palette');
     COLORS.forEach((color, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'swatch-cell';
+
         const btn = document.createElement('button');
         btn.className = 'color-btn' + (i === 0 ? ' active' : '');
         btn.style.background = color;
         btn.id = `color-${i}`;
-        btn.setAttribute('aria-label', `Color ${color}`);
+        btn.setAttribute('aria-label', `Color ${color} ${COLOR_NAMES[color] || ''}`);
         btn.onclick = () => selectColor(color, i);
-        palette.appendChild(btn);
+
+        const lbl = document.createElement('span');
+        lbl.className = 'color-name';
+        lbl.textContent = COLOR_NAMES[color] || '';
+
+        cell.appendChild(btn);
+        cell.appendChild(lbl);
+        palette.appendChild(cell);
     });
 }
 
@@ -158,6 +449,10 @@ function selectColor(color, index) {
     currentColor = color;
     document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`color-${index}`).classList.add('active');
+    // Update color name label style
+    document.querySelectorAll('.color-name').forEach(l => l.style.color = '');
+    const activeName = document.getElementById(`color-${index}`).nextSibling;
+    if (activeName) activeName.style.color = '#f4845f';
 }
 
 function setTool(tool) {
@@ -171,10 +466,10 @@ function buildGrid() {
     const container = document.getElementById('pixel-grid');
     container.innerHTML = '';
     container.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 20px)`;
-    grid = [];
+    pixelGrid = [];
 
     for (let r = 0; r < GRID_SIZE; r++) {
-        grid[r] = [];
+        pixelGrid[r] = [];
         for (let c = 0; c < GRID_SIZE; c++) {
             const pixel = document.createElement('div');
             pixel.className = 'pixel';
@@ -190,15 +485,15 @@ function buildGrid() {
             pixel.onclick = () => paintPixel(r, c);
 
             container.appendChild(pixel);
-            grid[r][c] = pixel;
+            pixelGrid[r][c] = pixel;
         }
     }
 }
 
-document.addEventListener('mouseup', () => isDrawing = false);
+document.addEventListener('mouseup', () => { isDrawing = false; });
 
 function paintPixel(r, c) {
-    const pixel = grid[r][c];
+    const pixel = pixelGrid[r][c];
     if (currentTool === 'pen') {
         pixel.style.background = currentColor;
         pixel.dataset.color = currentColor;
@@ -215,11 +510,11 @@ function paintPixel(r, c) {
 function floodFill(r, c, targetColor, fillColor) {
     if (targetColor === fillColor) return;
     if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE) return;
-    if (grid[r][c].dataset.color !== targetColor) return;
+    if (pixelGrid[r][c].dataset.color !== targetColor) return;
 
-    grid[r][c].style.background = fillColor;
-    grid[r][c].dataset.color = fillColor;
-    grid[r][c].setAttribute('aria-label', `Pixel row ${r + 1} column ${c + 1} colored ${fillColor}`);
+    pixelGrid[r][c].style.background = fillColor;
+    pixelGrid[r][c].dataset.color = fillColor;
+    pixelGrid[r][c].setAttribute('aria-label', `Pixel row ${r + 1} column ${c + 1} colored ${fillColor}`);
 
     floodFill(r + 1, c, targetColor, fillColor);
     floodFill(r - 1, c, targetColor, fillColor);
@@ -230,19 +525,19 @@ function floodFill(r, c, targetColor, fillColor) {
 function clearCanvas() {
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
-            grid[r][c].style.background = '#ffffff';
-            grid[r][c].dataset.color = '#ffffff';
+            pixelGrid[r][c].style.background = '#ffffff';
+            pixelGrid[r][c].dataset.color = '#ffffff';
+            pixelGrid[r][c].setAttribute('aria-label', `Pixel row ${r + 1} column ${c + 1}`);
         }
     }
     document.getElementById('save-msg').textContent = 'Canvas cleared';
 }
 
 function saveArt() {
-    // Save to localStorage
     const artData = [];
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
-            const color = grid[r][c].dataset.color;
+            const color = pixelGrid[r][c].dataset.color;
             if (color !== '#ffffff') {
                 artData.push({ r, c, color });
             }
@@ -258,16 +553,124 @@ function saveArt() {
         pixels: artData.length,
         data: artData
     });
-    // Keep last 20 artworks
     stats.canvas.artworks = stats.canvas.artworks.slice(-20);
     localStorage.setItem('fox-arcade-stats', JSON.stringify(stats));
 
-    document.getElementById('save-msg').textContent = `Saved! Artwork #${stats.canvas.count} (${artData.length} pixels)`;
+    document.getElementById('save-msg').textContent = `✦ Saved! Artwork #${stats.canvas.count} (${artData.length} pixels)`;
+    if (galleryOpen) renderGallery();
 }
 
 function newCanvas() {
     clearCanvas();
     document.getElementById('save-msg').textContent = 'New canvas ready';
+}
+
+// Gallery
+function toggleGallery() {
+    galleryOpen = !galleryOpen;
+    const section = document.getElementById('gallery-section');
+    const btn = document.getElementById('gallery-toggle');
+    section.classList.toggle('open', galleryOpen);
+    btn.classList.toggle('gallery-open', galleryOpen);
+    btn.setAttribute('aria-label', galleryOpen ? 'Hide artwork gallery' : 'Show artwork gallery');
+    if (galleryOpen) renderGallery();
+}
+
+function renderGallery() {
+    const content = document.getElementById('gallery-content');
+    const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
+    const artworks = stats.canvas ? stats.canvas.artworks : [];
+
+    if (!artworks.length) {
+        content.innerHTML = '<div class="gallery-empty">No saved artworks yet.<br>Draw something and tap Save!</div>';
+        return;
+    }
+
+    content.innerHTML = '';
+    const galleryEl = document.createElement('div');
+    galleryEl.className = 'gallery-grid';
+
+    [...artworks].reverse().forEach(art => {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+        item.setAttribute('aria-label', `Artwork ${art.id} saved on ${new Date(art.date).toLocaleDateString()} with ${art.pixels} pixels`);
+
+        // Mini canvas thumbnail (16x16 scaled to 80x80 via CSS)
+        const thumb = document.createElement('canvas');
+        thumb.width = 16;
+        thumb.height = 16;
+        thumb.className = 'gallery-thumb';
+        thumb.setAttribute('aria-hidden', 'true');
+        const ctx = thumb.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 16, 16);
+        art.data.forEach(({ r, c, color }) => {
+            ctx.fillStyle = color;
+            ctx.fillRect(c, r, 1, 1);
+        });
+
+        // Meta text
+        const meta = document.createElement('div');
+        meta.className = 'gallery-meta';
+        const d = new Date(art.date);
+        const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+        meta.innerHTML = `<span class="art-num">#${art.id}</span><br>${dateStr}<br>${art.pixels}px`;
+
+        // Load / Delete buttons
+        const btns = document.createElement('div');
+        btns.className = 'gallery-btns';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'gb load-btn';
+        loadBtn.textContent = 'Load';
+        loadBtn.setAttribute('aria-label', `Load artwork ${art.id}`);
+        loadBtn.onclick = () => loadArt(art);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'gb del-btn';
+        delBtn.textContent = 'Del';
+        delBtn.setAttribute('aria-label', `Delete artwork ${art.id}`);
+        delBtn.onclick = () => deleteArt(art.id);
+
+        btns.appendChild(loadBtn);
+        btns.appendChild(delBtn);
+
+        item.appendChild(thumb);
+        item.appendChild(meta);
+        item.appendChild(btns);
+        galleryEl.appendChild(item);
+    });
+
+    content.appendChild(galleryEl);
+}
+
+function loadArt(art) {
+    // Clear first
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            pixelGrid[r][c].style.background = '#ffffff';
+            pixelGrid[r][c].dataset.color = '#ffffff';
+            pixelGrid[r][c].setAttribute('aria-label', `Pixel row ${r + 1} column ${c + 1}`);
+        }
+    }
+    // Paint saved pixels
+    art.data.forEach(({ r, c, color }) => {
+        if (r < GRID_SIZE && c < GRID_SIZE) {
+            pixelGrid[r][c].style.background = color;
+            pixelGrid[r][c].dataset.color = color;
+            pixelGrid[r][c].setAttribute('aria-label', `Pixel row ${r + 1} column ${c + 1} colored ${color}`);
+        }
+    });
+    document.getElementById('save-msg').textContent = `Loaded artwork #${art.id}`;
+}
+
+function deleteArt(id) {
+    const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
+    if (!stats.canvas) return;
+    stats.canvas.artworks = stats.canvas.artworks.filter(a => a.id !== id);
+    localStorage.setItem('fox-arcade-stats', JSON.stringify(stats));
+    document.getElementById('save-msg').textContent = `Deleted artwork #${id}`;
+    renderGallery();
 }
 
 // Init
