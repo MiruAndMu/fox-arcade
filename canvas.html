@@ -35,7 +35,7 @@ body {
 
 /* Header */
 .header {
-    padding: 16px 0 8px;
+    padding: 8px 0 4px;
     text-align: center;
 }
 h1 {
@@ -56,13 +56,13 @@ h1 {
     background: #111125;
     border: 1px solid #1e1e3a;
     border-radius: 12px;
-    padding: 16px;
+    padding: 12px;
     margin: 8px 16px;
     width: min(420px, calc(100% - 32px));
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 /* Toolbar */
@@ -120,8 +120,8 @@ h1 {
 }
 .palette {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 5px;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 4px;
     width: 100%;
 }
 .swatch-cell {
@@ -151,13 +151,7 @@ h1 {
     z-index: 2;
 }
 .color-name {
-    font-size: 7px;
-    color: #3a3a5a;
-    text-align: center;
-    line-height: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    max-width: 100%;
+    display: none;
 }
 .color-btn.active ~ .color-name {
     color: #f4845f;
@@ -184,8 +178,8 @@ h1 {
     gap: 0;
 }
 .pixel {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-right: 0.5px solid rgba(0, 0, 0, 0.08);
     border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
     background: #ffffff;
@@ -465,7 +459,7 @@ function setTool(tool) {
 function buildGrid() {
     const container = document.getElementById('pixel-grid');
     container.innerHTML = '';
-    container.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 20px)`;
+    container.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 16px)`;
     pixelGrid = [];
 
     for (let r = 0; r < GRID_SIZE; r++) {

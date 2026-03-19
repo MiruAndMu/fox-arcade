@@ -14,14 +14,21 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    overflow-x: hidden;
 }
 .nav { padding: 10px; width: 100%; }
 .nav a { color: #f4845f; text-decoration: none; font-size: 14px; }
-h1 { color: #f4845f; font-size: 28px; margin: 5px 0 10px; }
+
+h1 {
+    color: #f4845f;
+    font-size: 26px;
+    margin: 4px 0 8px;
+    text-shadow: 0 0 20px rgba(244, 132, 95, 0.4);
+}
 
 .info {
     text-align: center;
-    margin: 5px 0;
+    margin: 4px 0;
     font-size: 14px;
     color: #7f8c8d;
 }
@@ -29,110 +36,337 @@ h1 { color: #f4845f; font-size: 28px; margin: 5px 0 10px; }
 
 .message {
     height: 28px;
-    font-size: 18px;
+    font-size: 16px;
     color: #e94560;
-    margin: 8px 0;
+    margin: 6px 0;
     text-align: center;
+    transition: color 0.3s;
 }
+.message.good { color: #ffd700; }
+.message.win { color: #f4845f; font-size: 20px; }
 
+/* === BOARD === */
 .board {
     display: grid;
     gap: 8px;
-    margin: 10px 0;
-    padding: 10px;
+    margin: 8px 0;
+    padding: 12px;
+    background: rgba(15, 52, 96, 0.15);
+    border-radius: 12px;
+    border: 1px solid rgba(15, 52, 96, 0.4);
 }
+
+/* === 3D CARD === */
 .card {
     width: 72px;
     height: 72px;
-    border: 2px solid #0f3460;
+    cursor: pointer;
+    user-select: none;
+    perspective: 600px;
+    position: relative;
+}
+.card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card.face-up .card-inner {
+    transform: rotateY(180deg);
+}
+.card.matched .card-inner {
+    transform: rotateY(180deg);
+    animation: matchPop 0.45s ease 0.45s both;
+}
+.card-back, .card-front {
+    position: absolute;
+    width: 100%;
+    height: 100%;
     border-radius: 8px;
-    background: #16213e;
+    backface-visibility: hidden;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
-    cursor: pointer;
-    transition: all 0.3s;
-    user-select: none;
-}
-.card.face-down {
-    background: #0f3460;
-}
-.card.face-down::after {
-    content: '?';
-    font-size: 28px;
-    color: #1a1a2e;
-}
-.card.face-up {
-    background: #16213e;
-    border-color: #f4845f;
-}
-.card.matched {
-    background: #538d4e;
-    border-color: #538d4e;
-    opacity: 0.8;
+    overflow: hidden;
 }
 
-.actions {
-    display: flex;
-    gap: 8px;
-    margin: 10px 0;
+/* Card Back — fox paw pattern */
+.card-back {
+    background: linear-gradient(135deg, #0a1d3a 0%, #0f3460 55%, #0a1d3a 100%);
+    border: 2px solid #1e4080;
+    box-shadow: inset 0 0 12px rgba(244, 132, 95, 0.08);
 }
+.card-back-paw {
+    font-size: 30px;
+    opacity: 0.55;
+    filter: drop-shadow(0 0 4px rgba(244, 132, 95, 0.3));
+    transition: opacity 0.2s;
+}
+.card:hover .card-back-paw {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 6px rgba(244, 132, 95, 0.5));
+}
+/* Tiny corner paw dots */
+.card-back::before {
+    content: '·  ·';
+    position: absolute;
+    top: 5px;
+    font-size: 6px;
+    color: rgba(244, 132, 95, 0.25);
+    letter-spacing: 3px;
+}
+.card-back::after {
+    content: '·  ·';
+    position: absolute;
+    bottom: 5px;
+    font-size: 6px;
+    color: rgba(244, 132, 95, 0.25);
+    letter-spacing: 3px;
+}
+
+/* Card Front — symbol face */
+.card-front {
+    background: #16213e;
+    border: 2px solid #f4845f;
+    transform: rotateY(180deg);
+    box-shadow: 0 0 10px rgba(244, 132, 95, 0.2);
+}
+.card.matched .card-front {
+    background: linear-gradient(135deg, #162a16, #1e3d1e);
+    border-color: #ffd700;
+    box-shadow: 0 0 14px rgba(255, 215, 0, 0.3);
+}
+.card-emoji {
+    font-size: 28px;
+    line-height: 1;
+}
+.card-name {
+    font-size: 8px;
+    color: rgba(244, 132, 95, 0.8);
+    margin-top: 3px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+.card.matched .card-name {
+    color: #ffd700;
+}
+
+/* === ANIMATIONS === */
+@keyframes matchPop {
+    0%   { transform: rotateY(180deg) scale(1); }
+    30%  { transform: rotateY(180deg) scale(1.18); }
+    60%  { transform: rotateY(180deg) scale(0.93); }
+    100% { transform: rotateY(180deg) scale(1); }
+}
+
+@keyframes sparkleOut {
+    0%   { transform: translate(0, 0) scale(0.5); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+@keyframes confettiFall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(120px) rotate(720deg); opacity: 0; }
+}
+
+/* Sparkle elements */
+.sparkle {
+    position: absolute;
+    pointer-events: none;
+    font-size: 13px;
+    z-index: 10;
+    animation: sparkleOut 0.6s ease-out forwards;
+    top: 50%;
+    left: 50%;
+}
+
+/* Win confetti */
+.confetti-piece {
+    position: fixed;
+    pointer-events: none;
+    font-size: 16px;
+    z-index: 100;
+    animation: confettiFall 1.2s ease-in forwards;
+}
+
+/* === CONTROLS === */
+.controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    width: 100%;
+    max-width: 360px;
+}
+
+.theme-row, .actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.theme-label {
+    font-size: 12px;
+    color: #7f8c8d;
+    align-self: center;
+}
+
+.theme-btn {
+    padding: 6px 10px;
+    border: 2px solid #0f3460;
+    border-radius: 6px;
+    background: #16213e;
+    color: #aaa;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.theme-btn.active {
+    border-color: #f4845f;
+    color: #f4845f;
+    background: rgba(244, 132, 95, 0.1);
+}
+.theme-btn:hover:not(.active) {
+    border-color: #1e4080;
+    color: #ccc;
+}
+
 .action-btn {
-    padding: 10px 18px;
+    padding: 9px 14px;
     border: 2px solid #0f3460;
     border-radius: 6px;
     background: #16213e;
     color: #eee;
     font-family: 'Courier New', monospace;
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
+    transition: all 0.2s;
+}
+.action-btn:hover {
+    border-color: #f4845f;
+    color: #f4845f;
+}
+.action-btn.active-diff {
+    border-color: #f4845f;
+    color: #f4845f;
+    background: rgba(244, 132, 95, 0.08);
 }
 
 .stats {
     font-size: 12px;
     color: #7f8c8d;
-    margin: 10px 0;
+    margin: 8px 0;
     text-align: center;
+}
+
+footer {
+    margin-top: auto;
+    padding: 12px;
+    font-size: 11px;
+    color: #3a3a5c;
 }
 </style>
 </head>
 <body>
 
-<div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">Back to Arcade</a></div>
-<h1>Fox Memory</h1>
+<div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">← Back to Arcade</a></div>
+<h1>🦊 Fox Memory</h1>
 
 <div class="info">
-    Moves: <span id="moves">0</span> | Pairs: <span id="pairs">0</span> / <span id="total-pairs">0</span>
+    Moves: <span id="moves">0</span> &nbsp;|&nbsp; Pairs: <span id="pairs">0</span> / <span id="total-pairs">0</span>
 </div>
 
 <div class="message" id="message" aria-live="polite"></div>
 
 <div class="board" id="board"></div>
 
-<div class="actions">
-    <button class="action-btn" aria-label="New game easy 4x3" onclick="startGame(4, 3)">Easy (4x3)</button>
-    <button class="action-btn" aria-label="New game medium 4x4" onclick="startGame(4, 4)">Medium (4x4)</button>
+<div class="controls">
+    <div class="theme-row">
+        <span class="theme-label">Theme:</span>
+        <button class="theme-btn active" aria-label="Theme Classic Animals" onclick="setTheme('classic')">🦊 Classic</button>
+        <button class="theme-btn" aria-label="Theme Space Cosmos" onclick="setTheme('space')">🌙 Space</button>
+        <button class="theme-btn" aria-label="Theme Music Sounds" onclick="setTheme('music')">🎵 Music</button>
+    </div>
+    <div class="actions">
+        <button class="action-btn active-diff" aria-label="New game easy 4x3" onclick="newGame(4, 3, this)">Easy (4×3)</button>
+        <button class="action-btn" aria-label="New game medium 4x4" onclick="newGame(4, 4, this)">Medium (4×4)</button>
+        <button class="action-btn" aria-label="New game hard 4x5" onclick="newGame(4, 5, this)">Hard (4×5)</button>
+    </div>
 </div>
 
 <div class="stats" id="stats"></div>
 
-<script>
-// Symbols for matching (using simple text characters for accessibility)
-const SYMBOLS = [
-    'FOX', 'COW', 'SUN', 'MOON',
-    'STAR', 'LEAF', 'DROP', 'FIRE',
-    'FISH', 'BIRD', 'GEM', 'KEY'
-];
+<footer>built with love by cow &amp; fox</footer>
 
+<script>
+// Themed symbol sets: { name, emoji }
+const THEMES = {
+    classic: [
+        {name:'FOX',   emoji:'🦊'}, {name:'COW',  emoji:'🐄'},
+        {name:'BEAR',  emoji:'🐻'}, {name:'BIRD', emoji:'🐦'},
+        {name:'FISH',  emoji:'🐟'}, {name:'FROG', emoji:'🐸'},
+        {name:'OWL',   emoji:'🦉'}, {name:'CAT',  emoji:'🐱'},
+        {name:'WOLF',  emoji:'🐺'}, {name:'DUCK', emoji:'🦆'},
+        {name:'BEE',   emoji:'🐝'}, {name:'CRAB', emoji:'🦀'},
+    ],
+    space: [
+        {name:'SUN',   emoji:'☀️'}, {name:'MOON',  emoji:'🌙'},
+        {name:'STAR',  emoji:'⭐'}, {name:'COMET', emoji:'☄️'},
+        {name:'RING',  emoji:'🪐'}, {name:'SHIP',  emoji:'🚀'},
+        {name:'ALIEN', emoji:'👾'}, {name:'GLOBE', emoji:'🌍'},
+        {name:'NOVA',  emoji:'💫'}, {name:'SCOPE', emoji:'🔭'},
+        {name:'ROCK',  emoji:'🪨'}, {name:'HOLE',  emoji:'🕳️'},
+    ],
+    music: [
+        {name:'NOTE',  emoji:'🎵'}, {name:'DRUM',  emoji:'🥁'},
+        {name:'KEYS',  emoji:'🎹'}, {name:'HORN',  emoji:'🎺'},
+        {name:'GUIT',  emoji:'🎸'}, {name:'MIC',   emoji:'🎤'},
+        {name:'SAX',   emoji:'🎷'}, {name:'DISC',  emoji:'💿'},
+        {name:'SONG',  emoji:'🎶'}, {name:'AMP',   emoji:'🔊'},
+        {name:'BAND',  emoji:'🎬'}, {name:'VIBE',  emoji:'🔥'},
+    ],
+};
+
+let currentTheme = 'classic';
 let cards = [];
 let flipped = [];
 let matched = 0;
 let moves = 0;
 let totalPairs = 0;
 let locked = false;
-let cols = 4;
-let rows = 3;
+let isAnimating = false;
+let cols = 4, rows = 3;
+
+// Sparkle positions (dx, dy in px)
+const SPARK_DIRS = [
+    [-28, -28], [0, -36], [28, -28],
+    [-36, 0],             [36, 0],
+    [-28,  28], [0,  36], [28,  28],
+];
+const SPARK_ICONS = ['✨', '⭐', '💫', '✦', '·'];
+
+function setTheme(theme) {
+    currentTheme = theme;
+    // Update theme buttons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('aria-label').toLowerCase().includes(theme));
+    });
+    // Restart game with same difficulty
+    startGame(cols, rows);
+}
+
+function newGame(c, r, btn) {
+    // Update difficulty button active state
+    document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active-diff'));
+    if (btn) btn.classList.add('active-diff');
+    startGame(c, r);
+}
 
 function startGame(c, r) {
     cols = c;
@@ -142,14 +376,16 @@ function startGame(c, r) {
     moves = 0;
     flipped = [];
     locked = false;
+    isAnimating = false;
 
     document.getElementById('moves').textContent = '0';
     document.getElementById('pairs').textContent = '0';
     document.getElementById('total-pairs').textContent = totalPairs;
-    document.getElementById('message').textContent = '';
+    setMessage('', '');
 
-    // Pick symbols and create pairs
-    const symbols = SYMBOLS.slice(0, totalPairs);
+    // Pick symbols from current theme
+    const theme = THEMES[currentTheme];
+    const symbols = theme.slice(0, totalPairs);
     cards = [...symbols, ...symbols];
 
     // Shuffle
@@ -163,40 +399,57 @@ function startGame(c, r) {
     board.innerHTML = '';
     board.style.gridTemplateColumns = `repeat(${cols}, 72px)`;
 
-    cards.forEach((symbol, i) => {
+    cards.forEach((sym, i) => {
         const card = document.createElement('div');
         card.className = 'card face-down';
         card.id = `card-${i}`;
-        card.dataset.symbol = symbol;
+        card.dataset.symbol = sym.name;
+        card.dataset.emoji = sym.emoji;
         card.dataset.index = i;
         card.setAttribute('aria-label', `Card ${i + 1} face down`);
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
         card.onclick = () => flipCard(i);
+
+        // Inner structure for 3D flip
+        card.innerHTML = `
+            <div class="card-inner">
+                <div class="card-back">
+                    <span class="card-back-paw">🐾</span>
+                </div>
+                <div class="card-front">
+                    <div class="card-emoji">${sym.emoji}</div>
+                    <div class="card-name">${sym.name}</div>
+                </div>
+            </div>
+        `;
+
         board.appendChild(card);
     });
 }
 
 function flipCard(index) {
-    if (locked) return;
+    if (locked || isAnimating) return;
     const card = document.getElementById(`card-${index}`);
-    if (card.classList.contains('face-up') || card.classList.contains('matched')) return;
+    if (!card.classList.contains('face-down')) return;
     if (flipped.length >= 2) return;
 
     // Flip face up
     card.classList.remove('face-down');
     card.classList.add('face-up');
-    card.textContent = card.dataset.symbol;
     card.setAttribute('aria-label', `Card ${index + 1} showing ${card.dataset.symbol}`);
     flipped.push(index);
 
     if (flipped.length === 2) {
         moves++;
         document.getElementById('moves').textContent = moves;
-        checkMatch();
+        isAnimating = true;
+        // Wait for both flip animations to settle before checking
+        setTimeout(checkMatch, 500);
     }
 }
 
 function checkMatch() {
-    locked = true;
     const [i1, i2] = flipped;
     const card1 = document.getElementById(`card-${i1}`);
     const card2 = document.getElementById(`card-${i2}`);
@@ -209,41 +462,87 @@ function checkMatch() {
         card2.classList.remove('face-up');
         card2.classList.add('matched');
         card2.setAttribute('aria-label', `Card ${i2 + 1} matched ${card2.dataset.symbol}`);
+
+        // Sparkles on both cards
+        spawnSparkles(card1);
+        spawnSparkles(card2);
+
         matched++;
         document.getElementById('pairs').textContent = matched;
-        document.getElementById('message').textContent = `Matched: ${card1.dataset.symbol}!`;
+        setMessage(`Matched ${card1.dataset.emoji} ${card1.dataset.symbol}!`, 'good');
+
         flipped = [];
+        isAnimating = false;
         locked = false;
 
         if (matched === totalPairs) {
-            document.getElementById('message').textContent = `You won in ${moves} moves!`;
-            updateStats(moves);
+            setTimeout(() => {
+                setMessage(`You won in ${moves} moves! 🦊`, 'win');
+                updateStats(moves);
+                launchWinConfetti();
+            }, 500);
         }
     } else {
-        // No match — flip back after delay
-        document.getElementById('message').textContent = `${card1.dataset.symbol} and ${card2.dataset.symbol} — no match`;
+        // No match
+        setMessage(`${card1.dataset.symbol} ≠ ${card2.dataset.symbol} — no match`, '');
         setTimeout(() => {
             card1.classList.remove('face-up');
             card1.classList.add('face-down');
-            card1.textContent = '';
             card1.setAttribute('aria-label', `Card ${i1 + 1} face down`);
             card2.classList.remove('face-up');
             card2.classList.add('face-down');
-            card2.textContent = '';
             card2.setAttribute('aria-label', `Card ${i2 + 1} face down`);
             flipped = [];
+            isAnimating = false;
             locked = false;
-            document.getElementById('message').textContent = '';
-        }, 3000);
+            setMessage('', '');
+        }, 1200);
     }
 }
 
-function updateStats(moves) {
+function spawnSparkles(card) {
+    SPARK_DIRS.forEach(([dx, dy], i) => {
+        const spark = document.createElement('span');
+        spark.className = 'sparkle';
+        spark.textContent = SPARK_ICONS[i % SPARK_ICONS.length];
+        spark.style.setProperty('--tx', `${dx}px`);
+        spark.style.setProperty('--ty', `${dy}px`);
+        spark.style.animationDelay = `${i * 30}ms`;
+        card.appendChild(spark);
+        setTimeout(() => spark.remove(), 700 + i * 30);
+    });
+}
+
+function launchWinConfetti() {
+    const icons = ['🦊', '⭐', '✨', '🌟', '💫', '🎉', '🥳', '🎊'];
+    const count = 24;
+    for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+            const c = document.createElement('span');
+            c.className = 'confetti-piece';
+            c.textContent = icons[i % icons.length];
+            c.style.left = `${Math.random() * 90 + 5}vw`;
+            c.style.top = `${Math.random() * 30}vh`;
+            c.style.animationDuration = `${0.8 + Math.random() * 0.8}s`;
+            c.style.fontSize = `${12 + Math.floor(Math.random() * 12)}px`;
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 1400);
+        }, i * 60);
+    }
+}
+
+function setMessage(text, cls) {
+    const el = document.getElementById('message');
+    el.textContent = text;
+    el.className = 'message' + (cls ? ' ' + cls : '');
+}
+
+function updateStats(moveCount) {
     const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
     if (!stats.memory) stats.memory = { played: 0, bestMoves: null };
     stats.memory.played++;
-    if (!stats.memory.bestMoves || moves < stats.memory.bestMoves) {
-        stats.memory.bestMoves = moves;
+    if (!stats.memory.bestMoves || moveCount < stats.memory.bestMoves) {
+        stats.memory.bestMoves = moveCount;
     }
     localStorage.setItem('fox-arcade-stats', JSON.stringify(stats));
     showStats();
@@ -253,10 +552,10 @@ function showStats() {
     const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
     const m = stats.memory || {};
     document.getElementById('stats').textContent =
-        `Played: ${m.played || 0} | Best: ${m.bestMoves || '-'} moves`;
+        `Played: ${m.played || 0} | Best: ${m.bestMoves ? m.bestMoves + ' moves' : '—'}`;
 }
 
-// Init — start with easy
+// Init
 showStats();
 startGame(4, 3);
 </script>

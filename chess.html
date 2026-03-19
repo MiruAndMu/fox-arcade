@@ -54,7 +54,8 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     gap: 8px;
     min-height: 26px;
     margin: 3px 0;
-    width: 476px; /* 8*56 + 2*border + rank labels */
+    width: auto;
+    max-width: 360px; /* 8*42 + 4px border + 20px rank labels */
     padding-left: 26px; /* align with board left edge */
 }
 .captured-label {
@@ -94,7 +95,7 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     font-size: 10px;
     color: #666;
     width: 20px;
-    height: 56px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -102,8 +103,8 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
 .board-col { display: flex; flex-direction: column; }
 .board {
     display: grid;
-    grid-template-columns: repeat(8, 56px);
-    grid-template-rows: repeat(8, 56px);
+    grid-template-columns: repeat(8, 42px);
+    grid-template-rows: repeat(8, 42px);
     gap: 0;
     border: 2px solid #2a2a3e;
     box-shadow: 0 6px 28px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
@@ -113,7 +114,7 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     padding-top: 4px;
 }
 .file-label {
-    width: 56px;
+    width: 42px;
     font-size: 10px;
     color: #666;
     text-align: center;
@@ -121,8 +122,8 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
 
 /* Squares */
 .square {
-    width: 56px;
-    height: 56px;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -149,7 +150,7 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
 
 /* Pieces */
 .piece {
-    font-size: 40px;
+    font-size: 30px;
     line-height: 1;
     position: relative;
     z-index: 1;
@@ -175,8 +176,8 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
 /* Valid move dot (empty square) */
 .move-dot {
     position: absolute;
-    width: 17px;
-    height: 17px;
+    width: 13px;
+    height: 13px;
     border-radius: 50%;
     background: rgba(0,0,0,0.19);
     pointer-events: none;
@@ -228,6 +229,36 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     margin: 6px 0 0;
     letter-spacing: 0.5px;
 }
+
+.move-history-section {
+    width: auto;
+    max-width: 360px;
+    margin: 8px 0 0;
+}
+.move-history-label {
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+}
+.move-history {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    padding: 5px 9px;
+    max-height: 96px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.8;
+    word-spacing: 3px;
+}
+.move-history:empty::after {
+    content: 'No moves yet';
+    color: #333;
+}
+.move-num { color: #555; }
+.move-white { color: #ddd; }
+.move-black { color: #999; }
 </style>
 </head>
 <body>
@@ -292,6 +323,11 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
 
 <div class="stats" id="stats"></div>
 
+<div class="move-history-section">
+    <div class="move-history-label">Move history</div>
+    <div class="move-history" id="move-history" aria-label="Move history" aria-live="polite"></div>
+</div>
+
 <script>
 // Piece symbols
 const PIECES = {
@@ -305,6 +341,92 @@ const PIECE_NAMES = {
 // Piece value order for display sorting
 const PIECE_ORDER = { 'Q': 0, 'q': 0, 'R': 1, 'r': 1, 'B': 2, 'b': 2, 'N': 3, 'n': 3, 'P': 4, 'p': 4 };
 const FILES = 'abcdefgh';
+
+// Opening book: key = space-joined UCI moves so far when it's black's turn, value = ordered candidates
+const OPENING_BOOK = {
+    // Black's 1st move
+    "e2e4": ["e7e5","c7c5","e7e6"],
+    "d2d4": ["d7d5","g8f6"],
+    "c2c4": ["e7e5","g8f6"],
+    // After 1.e4 e5
+    "e2e4 e7e5 g1f3": ["b8c6","g8f6"],
+    "e2e4 e7e5 f1c4": ["g8f6","b8c6"],
+    "e2e4 e7e5 b1c3": ["b8c6","g8f6"],
+    "e2e4 e7e5 d2d4": ["e5d4"],
+    // After 1.e4 e5 2.Nf3 Nc6 — Italian / Ruy Lopez / Scotch
+    "e2e4 e7e5 g1f3 b8c6 f1c4": ["f8c5","g8f6"],
+    "e2e4 e7e5 g1f3 b8c6 f1b5": ["a7a6","g8f6"],
+    "e2e4 e7e5 g1f3 b8c6 d2d4": ["e5d4"],
+    "e2e4 e7e5 g1f3 b8c6 b1c3": ["g8f6","f8c5"],
+    // Italian / Giuoco Piano continuation
+    "e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 c2c3": ["g8f6","d7d6"],
+    "e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 d2d3": ["g8f6","d7d6"],
+    "e2e4 e7e5 g1f3 b8c6 f1c4 f8c5 b1c3": ["g8f6","d7d6"],
+    // Ruy Lopez continuation
+    "e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4": ["g8f6"],
+    "e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5c6": ["d7c6"],
+    // Scotch
+    "e2e4 e7e5 g1f3 b8c6 d2d4 e5d4 f3d4": ["g8f6","f8c5"],
+    // Sicilian
+    "e2e4 c7c5 g1f3": ["d7d6","b8c6","e7e6"],
+    "e2e4 c7c5 b1c3": ["b8c6","d7d6"],
+    "e2e4 c7c5 g1f3 d7d6 d2d4": ["c5d4"],
+    "e2e4 c7c5 g1f3 b8c6 d2d4": ["c5d4"],
+    "e2e4 c7c5 g1f3 d7d6 d2d4 c5d4 f3d4": ["g8f6","b8c6"],
+    "e2e4 c7c5 g1f3 b8c6 d2d4 c5d4 f3d4": ["g8f6","e7e6"],
+    // French
+    "e2e4 e7e6 d2d4": ["d7d5"],
+    "e2e4 e7e6 d2d4 d7d5 b1c3": ["f8b4"],
+    "e2e4 e7e6 d2d4 d7d5 b1d2": ["g8f6"],
+    "e2e4 e7e6 d2d4 d7d5 e4e5": ["c7c5"],
+    // Queen's Gambit
+    "d2d4 d7d5 c2c4": ["e7e6","c7c6"],
+    "d2d4 d7d5 c2c4 e7e6 b1c3": ["g8f6","f8e7"],
+    "d2d4 d7d5 c2c4 c7c6 g1f3": ["g8f6"],
+    "d2d4 d7d5 g1f3": ["g8f6","e7e6"],
+    // King's Indian
+    "d2d4 g8f6 c2c4": ["g7g6","e7e6"],
+    "d2d4 g8f6 c2c4 g7g6 b1c3": ["f8g7"],
+    "d2d4 g8f6 c2c4 g7g6 b1c3 f8g7 e2e4": ["d7d6"],
+    "d2d4 g8f6 g1f3": ["e7e6","g7g6"],
+};
+
+function moveKey(fr, fc, tr, tc) {
+    return FILES[fc] + (8 - fr) + FILES[tc] + (8 - tr);
+}
+
+function getGameKey() {
+    return moveHistory.map(m => moveKey(m.from[0], m.from[1], m.to[0], m.to[1])).join(' ');
+}
+
+function toAlgebraicNotation(fr, fc, tr, tc, piece, capturedPiece, isPromotion) {
+    const type = piece.toUpperCase();
+    const dest = FILES[tc] + (8 - tr);
+    const isCapture = !!capturedPiece;
+    if (type === 'P') {
+        if (isPromotion) return (isCapture ? FILES[fc] + 'x' : '') + dest + '=Q';
+        if (isCapture) return FILES[fc] + 'x' + dest;
+        return dest;
+    }
+    return type + (isCapture ? 'x' : '') + dest;
+}
+
+function updateMoveHistory() {
+    const el = document.getElementById('move-history');
+    if (!el) return;
+    if (!moveHistory.length) { el.innerHTML = ''; return; }
+    let html = '';
+    for (let i = 0; i < moveHistory.length; i += 2) {
+        const num = Math.floor(i / 2) + 1;
+        const w = moveHistory[i].notation || '?';
+        const b = moveHistory[i + 1] ? (moveHistory[i + 1].notation || '?') : '';
+        html += `<span class="move-num">${num}.</span>&nbsp;<span class="move-white">${w}</span>`;
+        if (b) html += `&nbsp;<span class="move-black">${b}</span>`;
+        html += '&nbsp;&nbsp;';
+    }
+    el.innerHTML = html;
+    el.scrollTop = el.scrollHeight;
+}
 
 let board = [];
 let selected = null;
@@ -442,9 +564,12 @@ function makeMove(fr, fc, tr, tc) {
     const piece = board[fr][fc];
     const captured_piece = board[tr][tc];
 
+    const isPromotion = piece.toUpperCase() === 'P' && (tr === 0 || tr === 7);
+    const notation = toAlgebraicNotation(fr, fc, tr, tc, piece, captured_piece, isPromotion);
     moveHistory.push({
         from: [fr, fc], to: [tr, tc],
         piece, captured: captured_piece,
+        notation,
         board: board.map(row => [...row])
     });
 
@@ -524,6 +649,26 @@ function minimax(boardState, depth, alpha, beta, maximizing) {
 
 function aiMove() {
     if (gameOver || isWhiteTurn) return;
+
+    // Opening book: try book move first
+    const key = getGameKey();
+    const bookMoves = OPENING_BOOK[key];
+    if (bookMoves) {
+        for (const mv of bookMoves) {
+            const fc = FILES.indexOf(mv[0]);
+            const fr = 8 - parseInt(mv[1]);
+            const tc = FILES.indexOf(mv[2]);
+            const tr = 8 - parseInt(mv[3]);
+            if (fr < 0 || fr > 7 || fc < 0 || fc > 7) continue;
+            const legal = getMoves(fr, fc, board);
+            if (legal.some(([nr, nc]) => nr === tr && nc === tc)) {
+                makeMove(fr, fc, tr, tc);
+                render();
+                return;
+            }
+        }
+    }
+
     let bestScore = Infinity;
     let bestMoves = [];
     for (let r = 0; r < 8; r++) {
@@ -666,6 +811,9 @@ function render() {
     }
     renderCaptured('captured-black', captured.white, 'piece-black-cap');  // black captured white's pieces
     renderCaptured('captured-white', captured.black, 'piece-white-cap');  // white captured black's pieces
+
+    // Move history
+    updateMoveHistory();
 
     // Stats
     const statsEl = document.getElementById('stats');

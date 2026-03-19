@@ -254,6 +254,13 @@ h1 {
     box-shadow: 0 0 8px #f4845f44;
     outline: none;
 }
+.ctrl-btn-flash {
+    background: #252545 !important;
+    border-color: #f4845f !important;
+    color: #f4845f !important;
+    box-shadow: 0 0 18px #f4845faa, inset 0 0 10px #f4845f44 !important;
+    transition: none !important;
+}
 .ctrl-btn.action {
     background: #0c0c24;
     font-size: 12px;
@@ -392,13 +399,13 @@ h1 {
 
 <div class="controls">
     <div></div>
-    <button class="ctrl-btn" id="btn-up" aria-label="Move up" onclick="move(0,-1)">↑</button>
+    <button class="ctrl-btn" id="btn-up" aria-label="move up" onclick="move(0,-1)">↑</button>
     <div></div>
-    <button class="ctrl-btn" id="btn-left" aria-label="Move left" onclick="move(-1,0)">←</button>
-    <button class="ctrl-btn" id="btn-wait" aria-label="Wait one turn" onclick="wait()">·</button>
-    <button class="ctrl-btn" id="btn-right" aria-label="Move right" onclick="move(1,0)">→</button>
+    <button class="ctrl-btn" id="btn-left" aria-label="move left" onclick="move(-1,0)">←</button>
+    <button class="ctrl-btn" id="btn-wait" aria-label="wait" onclick="wait()">·</button>
+    <button class="ctrl-btn" id="btn-right" aria-label="move right" onclick="move(1,0)">→</button>
     <div></div>
-    <button class="ctrl-btn" id="btn-down" aria-label="Move down" onclick="move(0,1)">↓</button>
+    <button class="ctrl-btn" id="btn-down" aria-label="move down" onclick="move(0,1)">↓</button>
     <div></div>
 </div>
 
@@ -828,8 +835,21 @@ function render() {
     }
 }
 
+// --- D-pad flash: brief highlight on the pressed direction button ---
+function flashButton(id) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.add('ctrl-btn-flash');
+    setTimeout(() => btn.classList.remove('ctrl-btn-flash'), 280);
+}
+
 // --- Actions ---
 function move(dx, dy) {
+    // Light up the corresponding d-pad button so ADB/visual feedback align
+    if      (dx === 0  && dy === -1) flashButton('btn-up');
+    else if (dx === 0  && dy ===  1) flashButton('btn-down');
+    else if (dx === -1 && dy ===  0) flashButton('btn-left');
+    else if (dx ===  1 && dy ===  0) flashButton('btn-right');
     if (!gameActive) return;
     const nx = player.x + dx;
     const ny = player.y + dy;
@@ -1120,6 +1140,7 @@ function pickupItem(item) {
 
 function wait() {
     if (!gameActive) return;
+    flashButton('btn-wait');
     addLog("You wait...", 'info');
     endTurn();
 }

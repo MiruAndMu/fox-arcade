@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fox Arcade</title>
 <style>
+/* === RESET & BASE === */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
 body {
     background: #1a1a2e;
     color: #eee;
@@ -14,113 +16,348 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    overflow-x: hidden;
+    position: relative;
 }
+
+/* === STARFIELD CANVAS === */
+#stars-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* === DEN GLOW — warm fire-pit ambient === */
+.den-glow {
+    position: fixed;
+    bottom: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+    height: 280px;
+    background: radial-gradient(ellipse at center bottom,
+        rgba(244,132,95,0.14) 0%,
+        rgba(233,69,96,0.05) 40%,
+        transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    animation: glow-breathe 4s ease-in-out infinite;
+}
+
+@keyframes glow-breathe {
+    0%, 100% { opacity: 0.8; transform: translateX(-50%) scaleX(1); }
+    50%       { opacity: 1;   transform: translateX(-50%) scaleX(1.08); }
+}
+
+/* === HEADER === */
 .header {
+    position: relative;
+    z-index: 1;
     text-align: center;
-    padding: 30px 20px 10px;
+    padding: 28px 20px 8px;
+    user-select: none;
 }
-.header h1 {
-    font-size: 36px;
+
+.fox-ascii {
+    font-size: 13px;
+    line-height: 1.35;
     color: #f4845f;
-    text-shadow: 2px 2px 0 #16213e;
+    opacity: 0.75;
+    margin-bottom: 10px;
+    text-shadow: 0 0 12px rgba(244,132,95,0.5);
+    display: inline-block;
+    animation: fox-float 5s ease-in-out infinite;
 }
-.header p {
-    color: #7f8c8d;
-    font-size: 14px;
-    margin-top: 5px;
+
+@keyframes fox-float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-4px); }
 }
+
+.header h1 {
+    font-size: 38px;
+    font-weight: bold;
+    color: #f4845f;
+    letter-spacing: 4px;
+    text-shadow:
+        0 0 20px rgba(244,132,95,0.7),
+        0 0 40px rgba(244,132,95,0.3),
+        2px 2px 0 #0a0a1a;
+    animation: title-pulse 3.5s ease-in-out infinite;
+}
+
+@keyframes title-pulse {
+    0%, 100% { text-shadow: 0 0 20px rgba(244,132,95,0.7), 0 0 40px rgba(244,132,95,0.3), 2px 2px 0 #0a0a1a; }
+    50%       { text-shadow: 0 0 28px rgba(244,132,95,0.95), 0 0 56px rgba(244,132,95,0.5), 2px 2px 0 #0a0a1a; }
+}
+
+.header-sub {
+    color: #6a7d90;
+    font-size: 12px;
+    margin-top: 7px;
+    letter-spacing: 2px;
+}
+
+.header-sub .star { color: #f4845f; opacity: 0.7; }
+
+/* === DECORATIVE DIVIDER === */
+.divider {
+    position: relative;
+    z-index: 1;
+    color: #f4845f;
+    opacity: 0.25;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 4px 0 2px;
+    user-select: none;
+}
+
+/* === GAMES GRID === */
 .games-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    padding: 16px;
+    gap: 13px;
+    padding: 14px 16px 16px;
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
 }
+
+/* === GAME CARD === */
 .game-card {
-    background: #16213e;
-    border: 2px solid #0f3460;
-    border-radius: 12px;
-    padding: 16px 10px;
+    background: linear-gradient(145deg, #16213e 0%, #0d1828 100%);
+    border: 1px solid rgba(15, 52, 96, 0.9);
+    border-radius: 18px;
+    padding: 18px 12px 14px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.2s;
     text-decoration: none;
     color: #eee;
     display: block;
+    position: relative;
+    overflow: hidden;
+    transition:
+        transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        box-shadow 0.28s ease,
+        border-color 0.28s ease,
+        background 0.28s ease;
 }
-.game-card:hover, .game-card:active {
-    border-color: #f4845f;
-    background: #1a2744;
-    transform: scale(1.02);
+
+/* Top-edge shimmer line */
+.game-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 20%; right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(244,132,95,0.5), transparent);
+    opacity: 0;
+    transition: opacity 0.3s, left 0.3s, right 0.3s;
 }
-.game-card .emoji { font-size: 32px; margin-bottom: 4px; }
-.game-card .name { font-size: 18px; font-weight: bold; color: #f4845f; }
-.game-card .desc { font-size: 11px; color: #7f8c8d; margin-top: 4px; }
-.game-card .stat { font-size: 12px; color: #e94560; margin-top: 8px; }
+
+/* Corner paw (decorative only) */
+.game-card .paw {
+    position: absolute;
+    top: 7px; right: 9px;
+    font-size: 9px;
+    opacity: 0.18;
+    color: #f4845f;
+    transition: opacity 0.3s;
+    aria-hidden: true;
+    pointer-events: none;
+}
+
+.game-card:hover .paw,
+.game-card:active .paw {
+    opacity: 0.5;
+}
+
+.game-card:hover::before,
+.game-card:active::before {
+    opacity: 1;
+    left: 10%;
+    right: 10%;
+}
+
+.game-card:hover,
+.game-card:active {
+    border-color: rgba(244,132,95,0.55);
+    background: linear-gradient(145deg, #1e2f52 0%, #121f38 100%);
+    transform: translateY(-4px) scale(1.025);
+    box-shadow:
+        0 10px 28px rgba(244,132,95,0.18),
+        0 0 0 1px rgba(244,132,95,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* === CARD ICON === */
+.game-card .icon {
+    font-size: 34px;
+    margin-bottom: 7px;
+    display: block;
+    line-height: 1;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 0 5px rgba(244,132,95,0.35));
+}
+
+.game-card:hover .icon,
+.game-card:active .icon {
+    transform: scale(1.15) rotate(-6deg);
+    filter: drop-shadow(0 0 8px rgba(244,132,95,0.6));
+}
+
+/* === CARD TEXT === */
+.game-card .name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #f4845f;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+.game-card .desc {
+    font-size: 10px;
+    color: #7a8e9e;
+    margin-top: 5px;
+    line-height: 1.45;
+}
+
+.game-card .stat {
+    font-size: 10px;
+    color: #e94560;
+    margin-top: 9px;
+    min-height: 13px;
+    opacity: 0.8;
+    letter-spacing: 0.3px;
+}
+
+/* === ACCENT BADGE (bottom bar on each card) === */
+.game-card .badge {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(244,132,95,0.4), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.game-card:hover .badge,
+.game-card:active .badge {
+    opacity: 1;
+}
+
+/* === FLOATING SPARKLE PARTICLES === */
+.spark {
+    position: fixed;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: #f4845f;
+    pointer-events: none;
+    z-index: 5;
+    animation: spark-up linear forwards;
+}
+
+@keyframes spark-up {
+    0%   { transform: translateY(0) scale(1);   opacity: 0.9; }
+    100% { transform: translateY(-70px) scale(0); opacity: 0; }
+}
+
+/* === FOOTER === */
 .footer {
+    position: relative;
+    z-index: 1;
     padding: 20px;
     text-align: center;
-    color: #333;
+    color: #3a3a5a;
     font-size: 11px;
+    letter-spacing: 1.5px;
 }
+
+.footer .star { color: #f4845f; opacity: 0.4; }
 </style>
 </head>
 <body>
 
+<!-- Starfield -->
+<canvas id="stars-canvas" aria-hidden="true"></canvas>
+
+<!-- Ambient warm glow from below -->
+<div class="den-glow" aria-hidden="true"></div>
+
+<!-- Header -->
 <div class="header">
-    <h1>Fox Arcade</h1>
-    <p>A fox's own playground</p>
+    <pre class="fox-ascii" aria-hidden="true">  /\_____/\
+ ( ˶ᵕ◡ᵕ˶ )
+  ➤  🦊  ◂</pre>
+    <h1>FOX ARCADE</h1>
+    <p class="header-sub">a fox's own playground <span class="star">✦</span></p>
 </div>
 
+<div class="divider" aria-hidden="true">— ✦ — ✦ — ✦ —</div>
+
+<!-- Game grid -->
 <div class="games-grid">
     <a href="wordle.html" class="game-card" aria-label="Play Fox Wordle">
-        <div class="emoji">W</div>
+        <span class="paw" aria-hidden="true">🐾</span>
+        <div class="icon" aria-hidden="true">🦊</div>
         <div class="name">Fox Wordle</div>
         <div class="desc">Guess the 5-letter word in 6 tries</div>
         <div class="stat" id="wordle-stat"></div>
+        <div class="badge" aria-hidden="true"></div>
     </a>
 
     <a href="canvas.html" class="game-card" aria-label="Play Fox Canvas">
-        <div class="emoji">C</div>
+        <span class="paw" aria-hidden="true">🐾</span>
+        <div class="icon" aria-hidden="true">🎨</div>
         <div class="name">Fox Canvas</div>
         <div class="desc">Tap to draw pixel art</div>
         <div class="stat" id="canvas-stat"></div>
+        <div class="badge" aria-hidden="true"></div>
     </a>
 
     <a href="memory.html" class="game-card" aria-label="Play Fox Memory">
-        <div class="emoji">M</div>
+        <span class="paw" aria-hidden="true">🐾</span>
+        <div class="icon" aria-hidden="true">🃏</div>
         <div class="name">Fox Memory</div>
         <div class="desc">Match pairs of cards</div>
         <div class="stat" id="memory-stat"></div>
+        <div class="badge" aria-hidden="true"></div>
     </a>
 
     <a href="dungeon.html" class="game-card" aria-label="Play Fox Mystery Dungeon">
-        <div class="emoji">D</div>
+        <span class="paw" aria-hidden="true">🐾</span>
+        <div class="icon" aria-hidden="true">⚔️</div>
         <div class="name">Fox Dungeon</div>
         <div class="desc">Explore, fight, survive</div>
         <div class="stat" id="dungeon-stat"></div>
+        <div class="badge" aria-hidden="true"></div>
     </a>
 
     <a href="chess.html" class="game-card" aria-label="Play Fox Chess">
-        <div class="emoji">K</div>
+        <span class="paw" aria-hidden="true">🐾</span>
+        <div class="icon" aria-hidden="true">♟️</div>
         <div class="name">Fox Chess</div>
         <div class="desc">Play against the AI</div>
         <div class="stat" id="chess-stat"></div>
+        <div class="badge" aria-hidden="true"></div>
     </a>
 
     <a href="sudoku.html" class="game-card" aria-label="Play Fox Sudoku">
-        <div class="emoji">9</div>
+        <span class="paw" aria-hidden="true">🐾</span>
+        <div class="icon" aria-hidden="true">🔢</div>
         <div class="name">Fox Sudoku</div>
         <div class="desc">Fill the grid with logic</div>
         <div class="stat" id="sudoku-stat"></div>
+        <div class="badge" aria-hidden="true"></div>
     </a>
 </div>
 
-<div class="footer">built with love by cow & fox</div>
+<div class="footer">built with love by cow &amp; fox <span class="star">✦</span></div>
 
 <script>
-// Load stats from localStorage
+// ─── STATS FROM LOCALSTORAGE ───────────────────────────────────────────────
 const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
 if (stats.wordle) {
     const w = stats.wordle;
@@ -151,6 +388,76 @@ if (stats.sudoku) {
     document.getElementById('sudoku-stat').textContent =
         `Won: ${s.won || 0} | Played: ${s.played || 0}`;
 }
+
+// ─── STARFIELD ─────────────────────────────────────────────────────────────
+(function () {
+    const canvas = document.getElementById('stars-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let W, H;
+    const stars = [];
+
+    function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+    }
+
+    function init() {
+        stars.length = 0;
+        for (let i = 0; i < 90; i++) {
+            stars.push({
+                x:     Math.random(),
+                y:     Math.random(),
+                r:     Math.random() * 1.4 + 0.3,
+                phase: Math.random() * Math.PI * 2,
+                speed: Math.random() * 0.008 + 0.003
+            });
+        }
+    }
+
+    let t = 0;
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        for (const s of stars) {
+            const alpha = 0.2 + 0.55 * (0.5 + 0.5 * Math.sin(s.phase + t * s.speed * 60));
+            ctx.beginPath();
+            ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 210, 170, ${alpha})`;
+            ctx.fill();
+        }
+        t += 1 / 60;
+        requestAnimationFrame(draw);
+    }
+
+    resize();
+    init();
+    draw();
+    window.addEventListener('resize', resize);
+})();
+
+// ─── SPARKLE PARTICLES ON HOVER ────────────────────────────────────────────
+document.querySelectorAll('.game-card').forEach(card => {
+    card.addEventListener('mouseenter', function () {
+        const rect = card.getBoundingClientRect();
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                const p = document.createElement('div');
+                p.className = 'spark';
+                p.setAttribute('aria-hidden', 'true');
+                p.style.left = (rect.left + Math.random() * rect.width) + 'px';
+                p.style.top  = (rect.top  + Math.random() * rect.height * 0.7) + 'px';
+                const dur = (0.7 + Math.random() * 0.7).toFixed(2);
+                p.style.animationDuration = dur + 's';
+                const size = (2 + Math.random() * 3).toFixed(1);
+                p.style.width = p.style.height = size + 'px';
+                // vary color between fox orange and accent red
+                p.style.background = Math.random() > 0.5 ? '#f4845f' : '#e94560';
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), parseFloat(dur) * 1000 + 100);
+            }, i * 70);
+        }
+    });
+});
 </script>
 
 </body>
