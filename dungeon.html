@@ -7,7 +7,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-    background: #1a1a2e;
+    background: #0a0a18;
     color: #eee;
     font-family: 'Courier New', monospace;
     min-height: 100vh;
@@ -17,65 +17,191 @@ body {
 }
 .nav { padding: 10px; width: 100%; }
 .nav a { color: #f4845f; text-decoration: none; font-size: 14px; }
-h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
+h1 {
+    color: #f4845f;
+    font-size: 24px;
+    margin: 5px 0;
+    text-shadow: 0 0 12px #f4845f66, 0 0 24px #f4845f33;
+    letter-spacing: 2px;
+}
 
+/* --- HUD --- */
 .hud {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     font-size: 14px;
     margin: 5px 0;
     flex-wrap: wrap;
     justify-content: center;
+    background: #0d0d22;
+    border: 1px solid #1e1e42;
+    border-radius: 6px;
+    padding: 6px 12px;
 }
-.hud .hp { color: #e94560; }
-.hud .floor { color: #f4845f; }
-.hud .atk { color: #ffcc00; }
-.hud .shield { color: #87ceeb; }
-.hud .gold { color: #ffd700; }
+.hud .hp { color: #e94560; text-shadow: 0 0 6px #e9456055; }
+.hud .floor { color: #f4845f; text-shadow: 0 0 6px #f4845f44; }
+.hud .atk { color: #ffcc00; text-shadow: 0 0 6px #ffcc0044; }
+.hud .shield { color: #87ceeb; text-shadow: 0 0 6px #87ceeb44; }
+.hud .gold { color: #ffd700; text-shadow: 0 0 6px #ffd70044; }
 
+/* --- Log --- */
 .log {
     width: 90%;
     max-width: 400px;
-    height: 44px;
+    height: 48px;
     overflow: hidden;
     text-align: center;
     font-size: 13px;
     color: #7f8c8d;
     margin: 4px 0;
-    line-height: 22px;
+    line-height: 24px;
 }
-.log div { color: #ccc; }
+.log-info { color: #9aa5b4; }
+.log-hit { color: #e94560; text-shadow: 0 0 6px #e9456066; }
+.log-heal { color: #56d3a0; text-shadow: 0 0 6px #56d3a044; }
+.log-pickup { color: #ffd700; text-shadow: 0 0 6px #ffd70044; }
+.log-floor { color: #87ceeb; text-shadow: 0 0 6px #87ceeb44; }
+.log-shield { color: #87ceeb; }
+.log-warn { color: #f4845f; }
 
+/* --- Dungeon grid --- */
 .dungeon-container {
     margin: 6px 0;
-    border: 2px solid #0f3460;
-    border-radius: 4px;
+    border: 2px solid #1e1e42;
+    border-radius: 6px;
     overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 24px #00001888, inset 0 0 16px #000008;
+}
+/* ambient light overlay — soft radial glow at player position */
+.dungeon-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--px, 50%) var(--py, 50%), transparent 60px, rgba(0,0,8,0.55) 140px);
+    pointer-events: none;
+    border-radius: 4px;
 }
 .dungeon {
     display: grid;
     gap: 0;
 }
+
+/* --- Tile base --- */
 .tile {
     width: 36px;
     height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 18px;
     cursor: pointer;
-    border: 0.5px solid #111;
+    border: 0.5px solid rgba(0,0,0,0.5);
     user-select: none;
+    transition: background 0.1s;
 }
-.tile-wall { background: #0a0a1a; color: #222; }
-.tile-floor { background: #16213e; }
-.tile-player { background: #1a2744; color: #f4845f; font-size: 22px; }
-.tile-enemy { background: #16213e; color: #e94560; }
-.tile-boss { background: #16213e; color: #ff0000; font-size: 24px; }
-.tile-item { background: #16213e; color: #ffd700; }
-.tile-stairs { background: #16213e; color: #00ff00; }
-.tile-explored { background: #111833; }
 
+/* --- Fog: never visited --- */
+.tile-fog {
+    background: #000005;
+    color: transparent;
+    border-color: #00000a;
+}
+
+/* --- Wall: currently visible --- */
+.tile-wall {
+    background: #0c0c1e;
+    color: #2a2848;
+    border-color: #0a0a18;
+    font-size: 16px;
+}
+
+/* --- Wall: visited but out of sight --- */
+.tile-wall-dark {
+    background: #080813;
+    color: #161428;
+    border-color: #060610;
+    font-size: 16px;
+}
+
+/* --- Floor: currently visible --- */
+.tile-floor-lit {
+    background: #141e38;
+    color: #252d48;
+    font-size: 12px;
+}
+
+/* --- Floor: visited, out of sight --- */
+.tile-explored {
+    background: #0a1020;
+    color: #151c30;
+    font-size: 12px;
+}
+
+/* --- Player tile --- */
+.tile-player {
+    background: #1a2744;
+    font-size: 20px;
+    border-color: #f4845f44;
+    box-shadow: inset 0 0 8px #f4845f33;
+    animation: player-pulse 2s ease-in-out infinite;
+    z-index: 2;
+}
+@keyframes player-pulse {
+    0%, 100% { box-shadow: inset 0 0 8px #f4845f33, 0 0 6px #f4845f22; }
+    50%       { box-shadow: inset 0 0 14px #f4845f55, 0 0 10px #f4845f44; }
+}
+
+/* --- Enemy tile --- */
+.tile-enemy {
+    background: #1a0f1a;
+    font-size: 18px;
+    border-color: #e9456033;
+    animation: enemy-flicker 3s ease-in-out infinite;
+}
+@keyframes enemy-flicker {
+    0%, 100% { box-shadow: 0 0 4px #e9456033; }
+    40%       { box-shadow: 0 0 8px #e9456066; }
+    60%       { box-shadow: 0 0 3px #e9456022; }
+}
+
+/* --- Boss tile --- */
+.tile-boss {
+    background: #200808;
+    font-size: 20px;
+    border-color: #ff000055;
+    animation: boss-pulse 1.5s ease-in-out infinite;
+}
+@keyframes boss-pulse {
+    0%, 100% { box-shadow: 0 0 8px #ff000055, inset 0 0 6px #ff000033; }
+    50%       { box-shadow: 0 0 16px #ff0000aa, inset 0 0 10px #ff000055; }
+}
+
+/* --- Item tile --- */
+.tile-item {
+    background: #16180a;
+    font-size: 18px;
+    border-color: #ffd70033;
+    animation: item-shimmer 2.5s ease-in-out infinite;
+}
+@keyframes item-shimmer {
+    0%, 100% { box-shadow: 0 0 4px #ffd70044; }
+    50%       { box-shadow: 0 0 10px #ffd70088, inset 0 0 5px #ffd70022; }
+}
+
+/* --- Stairs tile --- */
+.tile-stairs {
+    background: #0a1a12;
+    font-size: 18px;
+    border-color: #00ff0033;
+    animation: stairs-pulse 2s ease-in-out infinite;
+}
+@keyframes stairs-pulse {
+    0%, 100% { box-shadow: 0 0 5px #00ff0033; }
+    50%       { box-shadow: 0 0 12px #00ff0077, inset 0 0 6px #00ff0022; }
+}
+
+/* --- Controls --- */
 .controls {
     display: grid;
     grid-template-columns: repeat(3, 64px);
@@ -84,10 +210,10 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     margin: 8px 0;
 }
 .ctrl-btn {
-    border: 2px solid #0f3460;
+    border: 2px solid #1e1e42;
     border-radius: 6px;
-    background: #16213e;
-    color: #eee;
+    background: #10101e;
+    color: #ccc;
     font-family: 'Courier New', monospace;
     font-size: 16px;
     font-weight: bold;
@@ -95,10 +221,17 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.1s;
 }
-.ctrl-btn:active { background: #1a2744; border-color: #f4845f; }
+.ctrl-btn:active, .ctrl-btn:focus {
+    background: #1a1a30;
+    border-color: #f4845f;
+    color: #f4845f;
+    box-shadow: 0 0 8px #f4845f44;
+    outline: none;
+}
 .ctrl-btn.action {
-    background: #0f3460;
+    background: #0c0c24;
     font-size: 12px;
 }
 
@@ -109,29 +242,45 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
 }
 .act-btn {
     padding: 10px 16px;
-    border: 2px solid #0f3460;
+    border: 2px solid #1e1e42;
     border-radius: 6px;
-    background: #16213e;
-    color: #eee;
+    background: #10101e;
+    color: #ccc;
     font-family: 'Courier New', monospace;
     font-size: 13px;
     cursor: pointer;
+    transition: all 0.1s;
 }
-.act-btn.shield-active { border-color: #87ceeb; background: #0f2a4a; }
-.act-btn:active { background: #1a2744; }
+.act-btn:active, .act-btn:focus {
+    background: #1a1a30;
+    border-color: #f4845f;
+    outline: none;
+}
+.act-btn.shield-active {
+    border-color: #87ceeb;
+    background: #0a1a28;
+    box-shadow: 0 0 8px #87ceeb44;
+    color: #87ceeb;
+}
 
+/* --- Game over overlay --- */
 .game-over {
     display: none;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,8,0.92);
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 100;
 }
 .game-over.show { display: flex; pointer-events: all; }
-.game-over h2 { color: #f4845f; font-size: 28px; margin-bottom: 10px; }
+.game-over h2 {
+    color: #f4845f;
+    font-size: 28px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 16px #f4845f88;
+}
 .game-over p { color: #7f8c8d; margin: 4px 0; font-size: 14px; }
 .game-over button {
     margin-top: 16px;
@@ -143,48 +292,54 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     font-family: 'Courier New', monospace;
     font-size: 16px;
     cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 0 12px #f4845f44;
+}
+.game-over button:hover {
+    background: #1e2e55;
+    box-shadow: 0 0 20px #f4845f88;
 }
 
-.stats { font-size: 11px; color: #333; margin: 5px 0; }
+.stats { font-size: 11px; color: #2a2a3a; margin: 5px 0; }
 </style>
 </head>
 <body>
 
-<div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">Back to Arcade</a></div>
-<h1>Fox Mystery Dungeon</h1>
+<div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">← Arcade</a></div>
+<h1>🦊 Fox Mystery Dungeon</h1>
 
 <div class="hud">
     <span class="hp" id="hud-hp" aria-label="Health">HP: 20/20</span>
     <span class="floor" id="hud-floor" aria-label="Floor">F1</span>
     <span class="atk" id="hud-atk" aria-label="Attack power">ATK: 3</span>
-    <span class="shield" id="hud-shield" aria-label="Shield charges">Shield: 1</span>
-    <span class="gold" id="hud-gold" aria-label="Gold collected">Gold: 0</span>
+    <span class="shield" id="hud-shield" aria-label="Shield charges">🛡 1</span>
+    <span class="gold" id="hud-gold" aria-label="Gold collected">💰 0</span>
 </div>
 
 <div class="log" id="log" aria-live="polite">
-    <div>A fox enters the dungeon...</div>
+    <div class="log-floor">A fox enters the dungeon...</div>
 </div>
 
-<div class="dungeon-container">
+<div class="dungeon-container" id="dungeon-container">
     <div class="dungeon" id="dungeon"></div>
 </div>
 
 <div class="controls">
     <div></div>
-    <button class="ctrl-btn" id="btn-up" aria-label="Move up" onclick="move(0,-1)">UP</button>
+    <button class="ctrl-btn" id="btn-up" aria-label="Move up" onclick="move(0,-1)">↑</button>
     <div></div>
-    <button class="ctrl-btn" id="btn-left" aria-label="Move left" onclick="move(-1,0)">LEFT</button>
-    <button class="ctrl-btn" id="btn-wait" aria-label="Wait one turn" onclick="wait()">WAIT</button>
-    <button class="ctrl-btn" id="btn-right" aria-label="Move right" onclick="move(1,0)">RIGHT</button>
+    <button class="ctrl-btn" id="btn-left" aria-label="Move left" onclick="move(-1,0)">←</button>
+    <button class="ctrl-btn" id="btn-wait" aria-label="Wait one turn" onclick="wait()">·</button>
+    <button class="ctrl-btn" id="btn-right" aria-label="Move right" onclick="move(1,0)">→</button>
     <div></div>
-    <button class="ctrl-btn" id="btn-down" aria-label="Move down" onclick="move(0,1)">DOWN</button>
+    <button class="ctrl-btn" id="btn-down" aria-label="Move down" onclick="move(0,1)">↓</button>
     <div></div>
 </div>
 
 <div class="actions-row">
-    <button class="act-btn" id="btn-shield" aria-label="Activate shield blocks next attack" onclick="activateShield()">Shield</button>
-    <button class="act-btn" id="btn-attack" aria-label="Attack nearby enemy" onclick="attackNearby()">Attack</button>
-    <button class="act-btn" id="btn-look" aria-label="Look around describe surroundings" onclick="lookAround()">Look</button>
+    <button class="act-btn" id="btn-shield" aria-label="Activate shield blocks next attack" onclick="activateShield()">🛡 Shield</button>
+    <button class="act-btn" id="btn-attack" aria-label="Attack nearby enemy" onclick="attackNearby()">⚔ Attack</button>
+    <button class="act-btn" id="btn-look" aria-label="Look around describe surroundings" onclick="lookAround()">👁 Look</button>
 </div>
 
 <div class="stats" id="stats"></div>
@@ -203,8 +358,9 @@ const MAP_W = 9;
 const MAP_H = 9;
 const ENEMIES_PER_FLOOR = 3;
 const ITEMS_PER_FLOOR = 2;
+const TILE_SIZE = 36;
 
-// --- Symbols ---
+// --- Symbols / Icons ---
 const SYM = {
     wall: '#',
     floor: '.',
@@ -218,11 +374,23 @@ const SYM = {
     stairs: '>',
 };
 
+// Visual emoji/char maps (don't affect aria-labels)
+const ENEMY_ICONS = {
+    'Rat': '🐀', 'Bat': '🦇', 'Slime': '🟢', 'Goblin': '👺',
+    'Snake': '🐍', 'Spider': '🕷', 'Ghost': '👻', 'Wolf': '🐺',
+    'Demon': '👿', 'Dragon': '🐉'
+};
+const ITEM_ICONS = {
+    potion: '🧪', gold: '💰', sword: '⚔', shieldItem: '🛡'
+};
+const WALL_CHARS = ['▓', '▓', '█', '▒', '▓'];  // variety via position hash
+
 const ENEMY_NAMES = ['Rat', 'Bat', 'Slime', 'Goblin', 'Snake', 'Spider', 'Ghost', 'Wolf', 'Demon', 'Dragon'];
 
 // --- State ---
 let map = [];
-let visible = [];
+let visible = [];   // ever seen
+let inSight = [];   // currently lit (this turn)
 let player = { x: 1, y: 1, hp: 20, maxHp: 20, atk: 3, shield: 1, shieldActive: false, gold: 0 };
 let enemies = [];
 let items = [];
@@ -233,7 +401,12 @@ let turn = 0;
 let gameActive = true;
 let logs = [];
 
-// --- Map generation (simple rooms + corridors) ---
+// --- Wall char: deterministic variety based on position ---
+function wallChar(x, y) {
+    return WALL_CHARS[((x * 397) ^ (y * 443)) % WALL_CHARS.length];
+}
+
+// --- Map generation ---
 function generateMap() {
     map = [];
     for (let y = 0; y < MAP_H; y++) {
@@ -276,10 +449,13 @@ function generateMap() {
 
     // Reset visibility
     visible = [];
+    inSight = [];
     for (let y = 0; y < MAP_H; y++) {
         visible[y] = [];
+        inSight[y] = [];
         for (let x = 0; x < MAP_W; x++) {
             visible[y][x] = false;
+            inSight[y][x] = false;
         }
     }
 
@@ -352,7 +528,12 @@ function randomFloor() {
 }
 
 function updateVisibility() {
-    // Simple radius visibility
+    // Reset inSight for this turn
+    for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+            inSight[y][x] = false;
+        }
+    }
     const radius = 3;
     for (let dy = -radius; dy <= radius; dy++) {
         for (let dx = -radius; dx <= radius; dx++) {
@@ -361,17 +542,27 @@ function updateVisibility() {
             if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H) {
                 if (Math.abs(dx) + Math.abs(dy) <= radius + 1) {
                     visible[ny][nx] = true;
+                    inSight[ny][nx] = true;
                 }
             }
         }
     }
 }
 
+// --- Ambient light overlay position ---
+function updateLightOverlay() {
+    const container = document.getElementById('dungeon-container');
+    const px = ((player.x + 0.5) / MAP_W) * 100;
+    const py = ((player.y + 0.5) / MAP_H) * 100;
+    container.style.setProperty('--px', px + '%');
+    container.style.setProperty('--py', py + '%');
+}
+
 // --- Rendering ---
 function render() {
     const dungeon = document.getElementById('dungeon');
     dungeon.innerHTML = '';
-    dungeon.style.gridTemplateColumns = `repeat(${MAP_W}, 36px)`;
+    dungeon.style.gridTemplateColumns = `repeat(${MAP_W}, ${TILE_SIZE}px)`;
 
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
@@ -379,44 +570,78 @@ function render() {
             tile.className = 'tile';
 
             if (!visible[y][x]) {
-                tile.className = 'tile tile-wall';
+                // Never visited: pure fog
+                tile.className = 'tile tile-fog';
                 tile.textContent = ' ';
                 tile.setAttribute('aria-label', 'Unknown');
             } else if (x === player.x && y === player.y) {
                 tile.className = 'tile tile-player';
-                tile.textContent = '@';
+                tile.textContent = '🦊';
                 tile.setAttribute('aria-label', 'Fox (you)');
             } else {
                 const enemy = enemies.find(e => e.x === x && e.y === y);
                 const item = items.find(i => i.x === x && i.y === y);
+                const lit = inSight[y][x];
 
-                if (enemy) {
+                if (enemy && lit) {
                     tile.className = enemy.isBoss ? 'tile tile-boss' : 'tile tile-enemy';
-                    tile.textContent = enemy.isBoss ? 'B' : 'E';
+                    tile.textContent = enemy.isBoss ? '☠' : (ENEMY_ICONS[enemy.name] || 'E');
                     tile.setAttribute('aria-label', `${enemy.name} HP:${enemy.hp} ATK:${enemy.atk}${enemy.isBoss ? ' BOSS' : ''}`);
-                } else if (x === stairsPos.x && y === stairsPos.y) {
+                } else if (x === stairsPos.x && y === stairsPos.y && lit) {
                     tile.className = 'tile tile-stairs';
-                    tile.textContent = '>';
+                    tile.textContent = '▼';
                     tile.setAttribute('aria-label', 'Stairs to next floor');
-                } else if (item) {
+                } else if (item && lit) {
                     tile.className = 'tile tile-item';
                     const labels = { potion: 'Potion restores HP', gold: 'Gold coins', sword: 'Sword boosts ATK', shieldItem: 'Shield charge' };
-                    tile.textContent = item.type === 'potion' ? '+' : item.type === 'gold' ? '$' : item.type === 'sword' ? '!' : 'O';
+                    tile.textContent = ITEM_ICONS[item.type] || item.type[0];
                     tile.setAttribute('aria-label', labels[item.type] || item.type);
                 } else if (map[y][x] === '#') {
-                    tile.className = 'tile tile-wall';
-                    tile.textContent = '#';
-                    tile.setAttribute('aria-label', 'Wall');
+                    // Wall — lit vs visited-but-dark
+                    if (lit) {
+                        tile.className = 'tile tile-wall';
+                        tile.textContent = wallChar(x, y);
+                        tile.setAttribute('aria-label', 'Wall');
+                    } else {
+                        tile.className = 'tile tile-wall-dark';
+                        tile.textContent = wallChar(x, y);
+                        tile.setAttribute('aria-label', 'Wall');
+                    }
                 } else {
-                    tile.className = 'tile tile-explored';
-                    tile.textContent = '.';
-                    tile.setAttribute('aria-label', 'Empty floor');
+                    // Floor — lit vs dim
+                    if (lit) {
+                        // Check for stairs/items that exist but aren't visible yet in fog
+                        if (x === stairsPos.x && y === stairsPos.y) {
+                            tile.className = 'tile tile-stairs';
+                            tile.textContent = '▼';
+                            tile.setAttribute('aria-label', 'Stairs to next floor');
+                        } else if (item) {
+                            tile.className = 'tile tile-item';
+                            const labels = { potion: 'Potion restores HP', gold: 'Gold coins', sword: 'Sword boosts ATK', shieldItem: 'Shield charge' };
+                            tile.textContent = ITEM_ICONS[item.type] || item.type[0];
+                            tile.setAttribute('aria-label', labels[item.type] || item.type);
+                        } else if (enemy) {
+                            tile.className = enemy.isBoss ? 'tile tile-boss' : 'tile tile-enemy';
+                            tile.textContent = enemy.isBoss ? '☠' : (ENEMY_ICONS[enemy.name] || 'E');
+                            tile.setAttribute('aria-label', `${enemy.name} HP:${enemy.hp} ATK:${enemy.atk}${enemy.isBoss ? ' BOSS' : ''}`);
+                        } else {
+                            tile.className = 'tile tile-floor-lit';
+                            tile.textContent = '·';
+                            tile.setAttribute('aria-label', 'Empty floor');
+                        }
+                    } else {
+                        tile.className = 'tile tile-explored';
+                        tile.textContent = '·';
+                        tile.setAttribute('aria-label', 'Empty floor');
+                    }
                 }
             }
 
             dungeon.appendChild(tile);
         }
     }
+
+    updateLightOverlay();
 
     // Update HUD
     document.getElementById('hud-hp').textContent = `HP: ${player.hp}/${player.maxHp}`;
@@ -425,9 +650,9 @@ function render() {
     document.getElementById('hud-floor').setAttribute('aria-label', `Floor ${floor}`);
     document.getElementById('hud-atk').textContent = `ATK: ${player.atk}`;
     document.getElementById('hud-atk').setAttribute('aria-label', `Attack power ${player.atk}`);
-    document.getElementById('hud-shield').textContent = `Shield: ${player.shield}`;
+    document.getElementById('hud-shield').textContent = `🛡 ${player.shield}`;
     document.getElementById('hud-shield').setAttribute('aria-label', `Shield charges ${player.shield}`);
-    document.getElementById('hud-gold').textContent = `Gold: ${player.gold}`;
+    document.getElementById('hud-gold').textContent = `💰 ${player.gold}`;
     document.getElementById('hud-gold').setAttribute('aria-label', `Gold ${player.gold}`);
 
     // Shield button state
@@ -449,14 +674,13 @@ function move(dx, dy) {
 
     if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) return;
     if (map[ny][nx] === '#') {
-        addLog("Bonk! That's a wall.");
+        addLog("Bonk! That's a wall.", 'warn');
         return;
     }
 
     // Check for enemy
     const enemy = enemies.find(e => e.x === nx && e.y === ny);
     if (enemy) {
-        // Attack enemy by moving into them
         combat(enemy);
         endTurn();
         return;
@@ -476,15 +700,14 @@ function move(dx, dy) {
 
     // Check for stairs
     if (nx === stairsPos.x && ny === stairsPos.y) {
-        addLog(`Descending to floor ${floor + 1}...`);
+        addLog(`Descending to floor ${floor + 1}...`, 'floor');
         floor++;
-        // Rest between floors — heal 30% of max HP
         const restHeal = Math.max(3, Math.floor(player.maxHp * 0.3));
         player.hp = Math.min(player.maxHp, player.hp + restHeal);
-        addLog(`The fox rests briefly. Healed ${restHeal} HP. (${player.hp}/${player.maxHp})`);
+        addLog(`Rested. +${restHeal} HP. (${player.hp}/${player.maxHp})`, 'heal');
         generateMap();
         render();
-        addLog(`Floor ${floor}. The dungeon grows darker.`);
+        addLog(`Floor ${floor}. The dungeon grows darker.`, 'floor');
         return;
     }
 
@@ -492,40 +715,36 @@ function move(dx, dy) {
 }
 
 function combat(enemy) {
-    // Player attacks
     const dmg = player.atk + Math.floor(Math.random() * 2);
     enemy.hp -= dmg;
-    addLog(`Hit ${enemy.name} for ${dmg}! ${enemy.hp > 0 ? `(${enemy.hp} HP left)` : 'Defeated!'}`);
+    addLog(`Hit ${enemy.name} for ${dmg}! ${enemy.hp > 0 ? `(${enemy.hp} HP left)` : 'Defeated!'}`, 'hit');
 
     if (enemy.hp <= 0) {
         enemies.splice(enemies.indexOf(enemy), 1);
         enemiesDefeated++;
         const goldDrop = 1 + Math.floor(Math.random() * 3) + (enemy.isBoss ? 5 : 0);
         player.gold += goldDrop;
-        addLog(`${enemy.name} dropped ${goldDrop} gold!`);
+        addLog(`${enemy.name} dropped ${goldDrop} gold!`, 'pickup');
     }
 }
 
 function endTurn() {
     turn++;
 
-    // Enemies act
     enemies.forEach(enemy => {
         const dx = Math.sign(player.x - enemy.x);
         const dy = Math.sign(player.y - enemy.y);
 
-        // If adjacent, attack
         if (Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y) <= 1) {
             if (player.shieldActive) {
                 player.shieldActive = false;
-                addLog(`Shield blocked ${enemy.name}'s attack!`);
+                addLog(`Shield blocked ${enemy.name}'s attack!`, 'shield');
             } else {
                 const edmg = enemy.atk + Math.floor(Math.random() * 2);
                 player.hp -= edmg;
-                addLog(`${enemy.name} hits you for ${edmg}!`);
+                addLog(`${enemy.name} hits you for ${edmg}!`, 'hit');
             }
         } else {
-            // Move toward player (simple chase)
             const nx = enemy.x + dx;
             const ny = enemy.y + dy;
             if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H &&
@@ -538,7 +757,6 @@ function endTurn() {
         }
     });
 
-    // Check death
     if (player.hp <= 0) {
         player.hp = 0;
         gameActive = false;
@@ -551,22 +769,21 @@ function endTurn() {
 function activateShield() {
     if (!gameActive) return;
     if (player.shield <= 0) {
-        addLog("No shield charges left!");
+        addLog("No shield charges left!", 'warn');
         return;
     }
     if (player.shieldActive) {
-        addLog("Shield already active!");
+        addLog("Shield already active!", 'warn');
         return;
     }
     player.shield--;
     player.shieldActive = true;
-    addLog("Shield activated! Next hit will be blocked.");
+    addLog("Shield activated! Next hit will be blocked.", 'shield');
     render();
 }
 
 function attackNearby() {
     if (!gameActive) return;
-    // Find adjacent enemy
     const adjacent = enemies.find(e =>
         Math.abs(e.x - player.x) + Math.abs(e.y - player.y) <= 1
     );
@@ -574,7 +791,7 @@ function attackNearby() {
         combat(adjacent);
         endTurn();
     } else {
-        addLog("No enemy nearby to attack.");
+        addLog("No enemy nearby to attack.", 'warn');
     }
 }
 
@@ -582,7 +799,6 @@ function lookAround() {
     if (!gameActive) return;
     const nearby = [];
 
-    // Check all visible tiles
     for (let dy = -3; dy <= 3; dy++) {
         for (let dx = -3; dx <= 3; dx++) {
             const nx = player.x + dx;
@@ -590,7 +806,6 @@ function lookAround() {
             if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && visible[ny][nx]) {
                 const enemy = enemies.find(e => e.x === nx && e.y === ny);
                 const item = items.find(i => i.x === nx && i.y === ny);
-                const dist = Math.abs(dx) + Math.abs(dy);
                 const dir = getDirection(dx, dy);
                 if (enemy) nearby.push(`${enemy.name}(HP:${enemy.hp}) ${dir}`);
                 if (item) nearby.push(`${item.type} ${dir}`);
@@ -600,9 +815,9 @@ function lookAround() {
     }
 
     if (nearby.length > 0) {
-        addLog("Nearby: " + nearby.join(", "));
+        addLog("Nearby: " + nearby.join(", "), 'info');
     } else {
-        addLog("Nothing interesting nearby.");
+        addLog("Nothing interesting nearby.", 'info');
     }
 }
 
@@ -618,40 +833,40 @@ function pickupItem(item) {
         case 'potion':
             const heal = 5 + Math.floor(floor / 2);
             player.hp = Math.min(player.maxHp, player.hp + heal);
-            addLog(`Potion! Healed ${heal} HP. (${player.hp}/${player.maxHp})`);
+            addLog(`🧪 Potion! +${heal} HP. (${player.hp}/${player.maxHp})`, 'heal');
             break;
         case 'gold':
             const amt = 2 + Math.floor(Math.random() * 4);
             player.gold += amt;
-            addLog(`Found ${amt} gold!`);
+            addLog(`💰 Found ${amt} gold!`, 'pickup');
             break;
         case 'sword':
             player.atk += 1;
-            addLog(`Sword! ATK increased to ${player.atk}!`);
+            addLog(`⚔ Sword! ATK → ${player.atk}!`, 'pickup');
             break;
         case 'shieldItem':
             player.shield += 1;
-            addLog(`Shield charge! Now have ${player.shield}.`);
+            addLog(`🛡 Shield charge! Now have ${player.shield}.`, 'pickup');
             break;
     }
 }
 
 function wait() {
     if (!gameActive) return;
-    addLog("You wait...");
+    addLog("You wait...", 'info');
     endTurn();
 }
 
-function addLog(msg) {
-    logs.unshift(msg);
+function addLog(msg, type) {
+    logs.unshift({ msg, type: type || 'info' });
     if (logs.length > 10) logs.pop();
     const logEl = document.getElementById('log');
-    logEl.innerHTML = logs.slice(0, 2).map(l => `<div>${l}</div>`).join('');
+    logEl.innerHTML = logs.slice(0, 2).map(l => `<div class="log-${l.type}">${l.msg}</div>`).join('');
 }
 
 function showGameOver(won) {
     document.getElementById('game-over').classList.add('show');
-    document.getElementById('go-title').textContent = won ? 'Victory!' : 'The fox falls...';
+    document.getElementById('go-title').textContent = won ? '🏆 Victory!' : 'The fox falls...';
     document.getElementById('go-floor').textContent = `Reached: Floor ${floor}`;
     document.getElementById('go-gold').textContent = `Gold: ${player.gold}`;
     document.getElementById('go-enemies').textContent = `Enemies defeated: ${enemiesDefeated}`;
@@ -678,7 +893,7 @@ function newGame() {
     turn = 0;
     gameActive = true;
     logs = [];
-    addLog("A fox enters the dungeon...");
+    addLog("A fox enters the dungeon...", 'floor');
     generateMap();
     render();
 }
@@ -708,5 +923,6 @@ document.getElementById('stats').textContent =
     `Best: F${d.bestFloor || 0} | Played: ${d.played || 0} | Enemies: ${d.totalEnemies || 0}`;
 </script>
 
+<p style="font-size:11px;color:#1e1e3a;margin:8px 0 4px;">built with love by cow & fox</p>
 </body>
 </html>
