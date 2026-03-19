@@ -43,6 +43,7 @@ h1 {
 .hud .atk { color: #ffcc00; text-shadow: 0 0 6px #ffcc0044; }
 .hud .shield { color: #87ceeb; text-shadow: 0 0 6px #87ceeb44; }
 .hud .gold { color: #ffd700; text-shadow: 0 0 6px #ffd70044; }
+.hud .keys { color: #ffd700; }
 
 /* --- Log --- */
 .log {
@@ -72,6 +73,7 @@ h1 {
     overflow: hidden;
     position: relative;
     box-shadow: 0 0 24px #00001888, inset 0 0 16px #000008;
+    transition: box-shadow 0.6s ease;
 }
 /* ambient light overlay — soft radial glow at player position */
 .dungeon-container::after {
@@ -85,6 +87,20 @@ h1 {
 .dungeon {
     display: grid;
     gap: 0;
+}
+
+/* --- Theme overrides --- */
+.theme-cave .dungeon-container {
+    box-shadow: 0 0 24px #00001888, inset 0 0 16px #000008;
+}
+.theme-dungeon .dungeon-container {
+    box-shadow: 0 0 24px #18001888, inset 0 0 16px #000008;
+}
+.theme-crypt .dungeon-container {
+    box-shadow: 0 0 24px #001808aa, inset 0 0 16px #000008;
+}
+.theme-abyss .dungeon-container {
+    box-shadow: 0 0 24px #1a000088, inset 0 0 16px #000008;
 }
 
 /* --- Tile base --- */
@@ -187,6 +203,14 @@ h1 {
 @keyframes item-shimmer {
     0%, 100% { box-shadow: 0 0 4px #ffd70044; }
     50%       { box-shadow: 0 0 10px #ffd70088, inset 0 0 5px #ffd70022; }
+}
+
+/* --- Chest tile --- */
+.tile-chest {
+    background: #1a1400;
+    font-size: 18px;
+    border-color: #ffd70044;
+    animation: item-shimmer 3s ease-in-out infinite;
 }
 
 /* --- Stairs tile --- */
@@ -300,6 +324,47 @@ h1 {
     box-shadow: 0 0 20px #f4845f88;
 }
 
+/* --- Continue screen overlay --- */
+#continue-screen {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,8,0.92);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+#continue-screen.show { display: flex; pointer-events: all; }
+#continue-screen h2 {
+    color: #f4845f;
+    font-size: 28px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 16px #f4845f88;
+}
+#continue-screen p { color: #7f8c8d; margin: 4px 0; font-size: 14px; }
+#continue-screen .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+#continue-screen button {
+    padding: 12px 24px;
+    border: 2px solid #f4845f;
+    border-radius: 6px;
+    background: #16213e;
+    color: #f4845f;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 0 12px #f4845f44;
+}
+#continue-screen button:hover {
+    background: #1e2e55;
+    box-shadow: 0 0 20px #f4845f88;
+}
+
 .stats { font-size: 11px; color: #2a2a3a; margin: 5px 0; }
 </style>
 </head>
@@ -314,6 +379,7 @@ h1 {
     <span class="atk" id="hud-atk" aria-label="Attack power">ATK: 3</span>
     <span class="shield" id="hud-shield" aria-label="Shield charges">🛡 1</span>
     <span class="gold" id="hud-gold" aria-label="Gold collected">💰 0</span>
+    <span class="keys" id="hud-keys" aria-label="Keys 0">🗝 0</span>
 </div>
 
 <div class="log" id="log" aria-live="polite">
@@ -352,6 +418,17 @@ h1 {
     <button aria-label="New Game — Play Again — Restart" onclick="newGame()">New Game</button>
 </div>
 
+<div id="continue-screen">
+    <h2>🦊 Run in Progress</h2>
+    <p id="cs-floor">Floor: 1</p>
+    <p id="cs-hp">HP: 20/20</p>
+    <p id="cs-gold">Gold: 0</p>
+    <div class="btn-row">
+        <button aria-label="Continue saved dungeon run" onclick="loadSave()">Continue Run</button>
+        <button aria-label="Start new dungeon game discard save" onclick="newGame()">New Game</button>
+    </div>
+</div>
+
 <script>
 // --- Config ---
 const MAP_W = 9;
@@ -360,40 +437,75 @@ const ENEMIES_PER_FLOOR = 3;
 const ITEMS_PER_FLOOR = 2;
 const TILE_SIZE = 36;
 
-// --- Symbols / Icons ---
-const SYM = {
-    wall: '#',
-    floor: '.',
-    player: '@',
-    enemy: 'E',
-    boss: 'B',
-    potion: '+',
-    gold: '$',
-    sword: '!',
-    shieldItem: 'O',
-    stairs: '>',
+// --- Enemy data ---
+const ENEMY_DATA = {
+    'Rat':             { behavior: 'chase',   baseHp: 3,  baseAtk: 1 },
+    'Rat Archer':      { behavior: 'ranged',  baseHp: 2,  baseAtk: 2 },
+    'Bat':             { behavior: 'patrol',  baseHp: 4,  baseAtk: 1 },
+    'Slime':           { behavior: 'chase',   baseHp: 6,  baseAtk: 1 },
+    'Goblin':          { behavior: 'chase',   baseHp: 5,  baseAtk: 2 },
+    'Goblin Scout':    { behavior: 'patrol',  baseHp: 4,  baseAtk: 2 },
+    'Snake':           { behavior: 'chase',   baseHp: 5,  baseAtk: 2 },
+    'Skeleton Archer': { behavior: 'ranged',  baseHp: 5,  baseAtk: 3 },
+    'Spider':          { behavior: 'patrol',  baseHp: 6,  baseAtk: 2 },
+    'Ghost':           { behavior: 'chase',   baseHp: 8,  baseAtk: 3 },
+    'Wolf':            { behavior: 'chase',   baseHp: 10, baseAtk: 3 },
+    'Lich':            { behavior: 'ranged',  baseHp: 12, baseAtk: 4 },
+    'Demon':           { behavior: 'chase',   baseHp: 15, baseAtk: 4 },
+    'Dragon':          { behavior: 'ranged',  baseHp: 25, baseAtk: 6 },
 };
 
 // Visual emoji/char maps (don't affect aria-labels)
 const ENEMY_ICONS = {
-    'Rat': '🐀', 'Bat': '🦇', 'Slime': '🟢', 'Goblin': '👺',
-    'Snake': '🐍', 'Spider': '🕷', 'Ghost': '👻', 'Wolf': '🐺',
-    'Demon': '👿', 'Dragon': '🐉'
+    'Rat': '🐀', 'Rat Archer': '🐀', 'Bat': '🦇', 'Slime': '🟢',
+    'Goblin': '👺', 'Goblin Scout': '👺', 'Snake': '🐍', 'Spider': '🕷',
+    'Ghost': '👻', 'Wolf': '🐺', 'Demon': '👿', 'Dragon': '🐉',
+    'Skeleton Archer': '💀', 'Lich': '🧙'
 };
 const ITEM_ICONS = {
-    potion: '🧪', gold: '💰', sword: '⚔', shieldItem: '🛡'
+    potion: '🧪', gold: '💰', sword: '⚔', shieldItem: '🛡', map: '🗺', key: '🗝'
 };
-const WALL_CHARS = ['▓', '▓', '█', '▒', '▓'];  // variety via position hash
 
-const ENEMY_NAMES = ['Rat', 'Bat', 'Slime', 'Goblin', 'Snake', 'Spider', 'Ghost', 'Wolf', 'Demon', 'Dragon'];
+// --- Floor themes ---
+function getTheme(f) {
+    if (f <= 3) return {
+        name: 'Cave',
+        wallChars: ['▓','▒','█','▓','▒'],
+        enemyPool: ['Rat','Rat Archer','Bat','Slime','Goblin'],
+        bossName: 'Wolf',
+        cssClass: 'theme-cave'
+    };
+    if (f <= 6) return {
+        name: 'Dungeon',
+        wallChars: ['█','▓','▓','░','█'],
+        enemyPool: ['Goblin','Goblin Scout','Snake','Spider','Ghost'],
+        bossName: 'Demon',
+        cssClass: 'theme-dungeon'
+    };
+    if (f <= 9) return {
+        name: 'Crypt',
+        wallChars: ['░','▓','▒','▓','░'],
+        enemyPool: ['Ghost','Skeleton Archer','Spider','Lich','Wolf'],
+        bossName: 'Lich',
+        cssClass: 'theme-crypt'
+    };
+    return {
+        name: 'Abyss',
+        wallChars: ['▓','█','▓','▒','▓'],
+        enemyPool: ['Lich','Demon','Dragon','Ghost','Skeleton Archer'],
+        bossName: 'Dragon',
+        cssClass: 'theme-abyss'
+    };
+}
 
 // --- State ---
 let map = [];
 let visible = [];   // ever seen
 let inSight = [];   // currently lit (this turn)
-let player = { x: 1, y: 1, hp: 20, maxHp: 20, atk: 3, shield: 1, shieldActive: false, gold: 0 };
+let player = { x: 1, y: 1, hp: 20, maxHp: 20, atk: 3, shield: 1, shieldActive: false, gold: 0, keys: 0 };
 let enemies = [];
 let items = [];
+let chests = [];
 let stairsPos = { x: 0, y: 0 };
 let floor = 1;
 let enemiesDefeated = 0;
@@ -401,13 +513,19 @@ let turn = 0;
 let gameActive = true;
 let logs = [];
 
-// --- Wall char: deterministic variety based on position ---
-function wallChar(x, y) {
-    return WALL_CHARS[((x * 397) ^ (y * 443)) % WALL_CHARS.length];
+// --- Wall char: deterministic variety based on position + theme ---
+function wallChar(x, y, theme) {
+    const chars = theme ? theme.wallChars : ['▓','▓','█','▒','▓'];
+    return chars[((x * 397) ^ (y * 443)) % chars.length];
 }
 
 // --- Map generation ---
 function generateMap() {
+    const theme = getTheme(floor);
+
+    // Apply theme class to body
+    document.body.className = theme.cssClass;
+
     map = [];
     for (let y = 0; y < MAP_H; y++) {
         map[y] = [];
@@ -467,21 +585,28 @@ function generateMap() {
     const lastRoom = rooms[rooms.length - 1];
     stairsPos = { x: lastRoom.cx, y: lastRoom.cy };
 
-    // Place enemies
+    // Place enemies from theme pool
+    const patrolDirs = [[1,0],[-1,0],[0,1],[0,-1]];
     enemies = [];
     for (let i = 0; i < ENEMIES_PER_FLOOR + Math.floor(floor / 2); i++) {
         const pos = randomFloor();
         if (pos) {
-            const baseHp = 3 + floor * 2;
-            const baseAtk = 1 + Math.floor(floor / 2);
-            const nameIdx = Math.min(floor - 1 + i, ENEMY_NAMES.length - 1);
-            enemies.push({
+            const name = theme.enemyPool[Math.floor(Math.random() * theme.enemyPool.length)];
+            const data = ENEMY_DATA[name] || { behavior: 'chase', baseHp: 3, baseAtk: 1 };
+            const enemy = {
                 x: pos.x, y: pos.y,
-                hp: baseHp + Math.floor(Math.random() * 3),
-                atk: baseAtk + Math.floor(Math.random() * 2),
-                name: ENEMY_NAMES[Math.min(nameIdx, ENEMY_NAMES.length - 1)],
+                hp: data.baseHp + floor + Math.floor(Math.random() * 3),
+                atk: data.baseAtk + Math.floor(floor / 3) + Math.floor(Math.random() * 2),
+                name: name,
+                behavior: data.behavior,
                 isBoss: false,
-            });
+            };
+            if (data.behavior === 'patrol') {
+                const d = patrolDirs[Math.floor(Math.random() * patrolDirs.length)];
+                enemy.patrolDx = d[0];
+                enemy.patrolDy = d[1];
+            }
+            enemies.push(enemy);
         }
     }
 
@@ -489,13 +614,22 @@ function generateMap() {
     if (floor % 3 === 0) {
         const bpos = randomFloor();
         if (bpos) {
-            enemies.push({
+            const bossName = theme.bossName;
+            const bdata = ENEMY_DATA[bossName] || { behavior: 'chase', baseHp: 10, baseAtk: 2 };
+            const boss = {
                 x: bpos.x, y: bpos.y,
-                hp: 10 + floor * 3,
-                atk: 2 + floor,
-                name: floor >= 9 ? 'Dragon' : floor >= 6 ? 'Demon' : 'Wolf',
+                hp: bdata.baseHp + floor * 3,
+                atk: bdata.baseAtk + floor,
+                name: bossName,
+                behavior: bdata.behavior,
                 isBoss: true,
-            });
+            };
+            if (bdata.behavior === 'patrol') {
+                const d = patrolDirs[Math.floor(Math.random() * patrolDirs.length)];
+                boss.patrolDx = d[0];
+                boss.patrolDy = d[1];
+            }
+            enemies.push(boss);
         }
     }
 
@@ -504,10 +638,17 @@ function generateMap() {
     for (let i = 0; i < ITEMS_PER_FLOOR; i++) {
         const pos = randomFloor();
         if (pos) {
-            const types = ['potion', 'potion', 'gold', 'sword', 'shieldItem'];
+            const types = ['potion','potion','gold','sword','shieldItem','map','key','key'];
             const type = types[Math.floor(Math.random() * types.length)];
             items.push({ x: pos.x, y: pos.y, type });
         }
+    }
+
+    // Place chest (1 per floor)
+    chests = [];
+    const cpos = randomFloor();
+    if (cpos) {
+        chests.push({ x: cpos.x, y: cpos.y });
     }
 
     updateVisibility();
@@ -520,7 +661,8 @@ function randomFloor() {
         if (map[y][x] === '.' && !(x === player.x && y === player.y) &&
             !(x === stairsPos.x && y === stairsPos.y) &&
             !enemies.some(e => e.x === x && e.y === y) &&
-            !items.some(i => i.x === x && i.y === y)) {
+            !items.some(i => i.x === x && i.y === y) &&
+            !chests.some(c => c.x === x && c.y === y)) {
             return { x, y };
         }
     }
@@ -560,9 +702,19 @@ function updateLightOverlay() {
 
 // --- Rendering ---
 function render() {
+    const theme = getTheme(floor);
     const dungeon = document.getElementById('dungeon');
     dungeon.innerHTML = '';
     dungeon.style.gridTemplateColumns = `repeat(${MAP_W}, ${TILE_SIZE}px)`;
+
+    const ITEM_LABELS = {
+        potion: 'Potion restores HP',
+        gold: 'Gold coins',
+        sword: 'Sword boosts ATK',
+        shieldItem: 'Shield charge',
+        map: 'Floor map reveals the whole level',
+        key: 'Key opens locked chests'
+    };
 
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
@@ -581,49 +733,57 @@ function render() {
             } else {
                 const enemy = enemies.find(e => e.x === x && e.y === y);
                 const item = items.find(i => i.x === x && i.y === y);
+                const chest = chests.find(c => c.x === x && c.y === y);
                 const lit = inSight[y][x];
 
                 if (enemy && lit) {
                     tile.className = enemy.isBoss ? 'tile tile-boss' : 'tile tile-enemy';
                     tile.textContent = enemy.isBoss ? '☠' : (ENEMY_ICONS[enemy.name] || 'E');
-                    tile.setAttribute('aria-label', `${enemy.name} HP:${enemy.hp} ATK:${enemy.atk}${enemy.isBoss ? ' BOSS' : ''}`);
+                    const behaviorHint = enemy.behavior === 'ranged' ? ' ranged' : enemy.behavior === 'patrol' ? ' patrols' : '';
+                    tile.setAttribute('aria-label', `${enemy.name} HP:${enemy.hp} ATK:${enemy.atk}${enemy.isBoss ? ' BOSS' : ''}${behaviorHint}`);
                 } else if (x === stairsPos.x && y === stairsPos.y && lit) {
                     tile.className = 'tile tile-stairs';
                     tile.textContent = '▼';
                     tile.setAttribute('aria-label', 'Stairs to next floor');
+                } else if (chest && lit) {
+                    tile.className = 'tile tile-chest';
+                    tile.textContent = '📦';
+                    tile.setAttribute('aria-label', 'Locked chest requires key to open');
                 } else if (item && lit) {
                     tile.className = 'tile tile-item';
-                    const labels = { potion: 'Potion restores HP', gold: 'Gold coins', sword: 'Sword boosts ATK', shieldItem: 'Shield charge' };
                     tile.textContent = ITEM_ICONS[item.type] || item.type[0];
-                    tile.setAttribute('aria-label', labels[item.type] || item.type);
+                    tile.setAttribute('aria-label', ITEM_LABELS[item.type] || item.type);
                 } else if (map[y][x] === '#') {
                     // Wall — lit vs visited-but-dark
                     if (lit) {
                         tile.className = 'tile tile-wall';
-                        tile.textContent = wallChar(x, y);
+                        tile.textContent = wallChar(x, y, theme);
                         tile.setAttribute('aria-label', 'Wall');
                     } else {
                         tile.className = 'tile tile-wall-dark';
-                        tile.textContent = wallChar(x, y);
+                        tile.textContent = wallChar(x, y, theme);
                         tile.setAttribute('aria-label', 'Wall');
                     }
                 } else {
                     // Floor — lit vs dim
                     if (lit) {
-                        // Check for stairs/items that exist but aren't visible yet in fog
                         if (x === stairsPos.x && y === stairsPos.y) {
                             tile.className = 'tile tile-stairs';
                             tile.textContent = '▼';
                             tile.setAttribute('aria-label', 'Stairs to next floor');
+                        } else if (chest) {
+                            tile.className = 'tile tile-chest';
+                            tile.textContent = '📦';
+                            tile.setAttribute('aria-label', 'Locked chest requires key to open');
                         } else if (item) {
                             tile.className = 'tile tile-item';
-                            const labels = { potion: 'Potion restores HP', gold: 'Gold coins', sword: 'Sword boosts ATK', shieldItem: 'Shield charge' };
                             tile.textContent = ITEM_ICONS[item.type] || item.type[0];
-                            tile.setAttribute('aria-label', labels[item.type] || item.type);
+                            tile.setAttribute('aria-label', ITEM_LABELS[item.type] || item.type);
                         } else if (enemy) {
                             tile.className = enemy.isBoss ? 'tile tile-boss' : 'tile tile-enemy';
                             tile.textContent = enemy.isBoss ? '☠' : (ENEMY_ICONS[enemy.name] || 'E');
-                            tile.setAttribute('aria-label', `${enemy.name} HP:${enemy.hp} ATK:${enemy.atk}${enemy.isBoss ? ' BOSS' : ''}`);
+                            const behaviorHint = enemy.behavior === 'ranged' ? ' ranged' : enemy.behavior === 'patrol' ? ' patrols' : '';
+                            tile.setAttribute('aria-label', `${enemy.name} HP:${enemy.hp} ATK:${enemy.atk}${enemy.isBoss ? ' BOSS' : ''}${behaviorHint}`);
                         } else {
                             tile.className = 'tile tile-floor-lit';
                             tile.textContent = '·';
@@ -654,6 +814,8 @@ function render() {
     document.getElementById('hud-shield').setAttribute('aria-label', `Shield charges ${player.shield}`);
     document.getElementById('hud-gold').textContent = `💰 ${player.gold}`;
     document.getElementById('hud-gold').setAttribute('aria-label', `Gold ${player.gold}`);
+    document.getElementById('hud-keys').textContent = `🗝 ${player.keys}`;
+    document.getElementById('hud-keys').setAttribute('aria-label', `Keys ${player.keys}`);
 
     // Shield button state
     const shieldBtn = document.getElementById('btn-shield');
@@ -686,6 +848,23 @@ function move(dx, dy) {
         return;
     }
 
+    // Check for chest
+    const chest = chests.find(c => c.x === nx && c.y === ny);
+    if (chest) {
+        if (player.keys > 0) {
+            player.keys--;
+            chests.splice(chests.indexOf(chest), 1);
+            const rewards = ['potion','sword','shieldItem','gold'];
+            const reward = rewards[Math.floor(Math.random() * rewards.length)];
+            pickupItem({ type: reward });
+            addLog('🗝 Chest opened!', 'pickup');
+        } else {
+            addLog('📦 Locked chest. Need a key.', 'warn');
+        }
+        endTurn();
+        return;
+    }
+
     // Move
     player.x = nx;
     player.y = ny;
@@ -707,7 +886,10 @@ function move(dx, dy) {
         addLog(`Rested. +${restHeal} HP. (${player.hp}/${player.maxHp})`, 'heal');
         generateMap();
         render();
-        addLog(`Floor ${floor}. The dungeon grows darker.`, 'floor');
+        const t = getTheme(floor);
+        const flavorMsg = t.name === 'Crypt' ? 'The air smells of old bones.' : t.name === 'Abyss' ? 'Reality fractures here.' : 'The dungeon shifts.';
+        addLog(`Floor ${floor} — ${t.name}. ${flavorMsg}`, 'floor');
+        saveCurrent();
         return;
     }
 
@@ -730,29 +912,92 @@ function combat(enemy) {
 
 function endTurn() {
     turn++;
+    const theme = getTheme(floor);
+    const patrolDirs = [[1,0],[-1,0],[0,1],[0,-1]];
 
     enemies.forEach(enemy => {
-        const dx = Math.sign(player.x - enemy.x);
-        const dy = Math.sign(player.y - enemy.y);
-
-        if (Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y) <= 1) {
-            if (player.shieldActive) {
-                player.shieldActive = false;
-                addLog(`Shield blocked ${enemy.name}'s attack!`, 'shield');
+        if (enemy.behavior === 'ranged') {
+            const dist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
+            if (dist <= 3 && inSight[enemy.y][enemy.x]) {
+                // ranged attack
+                if (player.shieldActive) {
+                    player.shieldActive = false;
+                    addLog(`Shield blocked ${enemy.name}'s shot!`, 'shield');
+                } else {
+                    const edmg = enemy.atk + Math.floor(Math.random() * 2);
+                    player.hp -= edmg;
+                    addLog(`${enemy.name} shoots you for ${edmg}!`, 'hit');
+                }
+            } else if (dist < 2) {
+                // back away
+                const bx = enemy.x + Math.sign(enemy.x - player.x);
+                const by = enemy.y + Math.sign(enemy.y - player.y);
+                if (bx >= 0 && bx < MAP_W && by >= 0 && by < MAP_H &&
+                    map[by][bx] === '.' &&
+                    !enemies.some(e => e !== enemy && e.x === bx && e.y === by)) {
+                    enemy.x = bx; enemy.y = by;
+                }
+            }
+            // else idles (out of range)
+        } else if (enemy.behavior === 'patrol') {
+            const dist = Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y);
+            if (dist <= 1) {
+                // melee attack when adjacent
+                if (player.shieldActive) {
+                    player.shieldActive = false;
+                    addLog(`Shield blocked ${enemy.name}'s attack!`, 'shield');
+                } else {
+                    const edmg = enemy.atk + Math.floor(Math.random() * 2);
+                    player.hp -= edmg;
+                    addLog(`${enemy.name} hits you for ${edmg}!`, 'hit');
+                }
             } else {
-                const edmg = enemy.atk + Math.floor(Math.random() * 2);
-                player.hp -= edmg;
-                addLog(`${enemy.name} hits you for ${edmg}!`, 'hit');
+                // patrol movement
+                const nx = enemy.x + enemy.patrolDx;
+                const ny = enemy.y + enemy.patrolDy;
+                if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H &&
+                    map[ny][nx] === '.' &&
+                    !enemies.some(e => e !== enemy && e.x === nx && e.y === ny) &&
+                    !(nx === player.x && ny === player.y)) {
+                    enemy.x = nx; enemy.y = ny;
+                } else {
+                    // pick new direction
+                    const valid = patrolDirs.filter(([ddx, ddy]) => {
+                        const tx = enemy.x + ddx, ty = enemy.y + ddy;
+                        return tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H &&
+                            map[ty][tx] === '.' &&
+                            !enemies.some(e => e !== enemy && e.x === tx && e.y === ty) &&
+                            !(tx === player.x && ty === player.y);
+                    });
+                    if (valid.length) {
+                        [enemy.patrolDx, enemy.patrolDy] = valid[Math.floor(Math.random() * valid.length)];
+                    }
+                }
             }
         } else {
-            const nx = enemy.x + dx;
-            const ny = enemy.y + dy;
-            if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H &&
-                map[ny][nx] === '.' &&
-                !enemies.some(e => e !== enemy && e.x === nx && e.y === ny) &&
-                !(nx === stairsPos.x && ny === stairsPos.y)) {
-                enemy.x = nx;
-                enemy.y = ny;
+            // chase (default behavior)
+            const dx = Math.sign(player.x - enemy.x);
+            const dy = Math.sign(player.y - enemy.y);
+
+            if (Math.abs(player.x - enemy.x) + Math.abs(player.y - enemy.y) <= 1) {
+                if (player.shieldActive) {
+                    player.shieldActive = false;
+                    addLog(`Shield blocked ${enemy.name}'s attack!`, 'shield');
+                } else {
+                    const edmg = enemy.atk + Math.floor(Math.random() * 2);
+                    player.hp -= edmg;
+                    addLog(`${enemy.name} hits you for ${edmg}!`, 'hit');
+                }
+            } else {
+                const nx = enemy.x + dx;
+                const ny = enemy.y + dy;
+                if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H &&
+                    map[ny][nx] === '.' &&
+                    !enemies.some(e => e !== enemy && e.x === nx && e.y === ny) &&
+                    !(nx === stairsPos.x && ny === stairsPos.y)) {
+                    enemy.x = nx;
+                    enemy.y = ny;
+                }
             }
         }
     });
@@ -761,8 +1006,10 @@ function endTurn() {
         player.hp = 0;
         gameActive = false;
         showGameOver(false);
+        return;
     }
 
+    saveCurrent();
     render();
 }
 
@@ -779,6 +1026,7 @@ function activateShield() {
     player.shield--;
     player.shieldActive = true;
     addLog("Shield activated! Next hit will be blocked.", 'shield');
+    saveCurrent();
     render();
 }
 
@@ -806,9 +1054,11 @@ function lookAround() {
             if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && visible[ny][nx]) {
                 const enemy = enemies.find(e => e.x === nx && e.y === ny);
                 const item = items.find(i => i.x === nx && i.y === ny);
+                const chest = chests.find(c => c.x === nx && c.y === ny);
                 const dir = getDirection(dx, dy);
                 if (enemy) nearby.push(`${enemy.name}(HP:${enemy.hp}) ${dir}`);
                 if (item) nearby.push(`${item.type} ${dir}`);
+                if (chest) nearby.push(`chest ${dir}`);
                 if (nx === stairsPos.x && ny === stairsPos.y) nearby.push(`Stairs ${dir}`);
             }
         }
@@ -830,16 +1080,18 @@ function getDirection(dx, dy) {
 
 function pickupItem(item) {
     switch (item.type) {
-        case 'potion':
+        case 'potion': {
             const heal = 5 + Math.floor(floor / 2);
             player.hp = Math.min(player.maxHp, player.hp + heal);
             addLog(`🧪 Potion! +${heal} HP. (${player.hp}/${player.maxHp})`, 'heal');
             break;
-        case 'gold':
+        }
+        case 'gold': {
             const amt = 2 + Math.floor(Math.random() * 4);
             player.gold += amt;
             addLog(`💰 Found ${amt} gold!`, 'pickup');
             break;
+        }
         case 'sword':
             player.atk += 1;
             addLog(`⚔ Sword! ATK → ${player.atk}!`, 'pickup');
@@ -847,6 +1099,21 @@ function pickupItem(item) {
         case 'shieldItem':
             player.shield += 1;
             addLog(`🛡 Shield charge! Now have ${player.shield}.`, 'pickup');
+            break;
+        case 'map':
+            // Reveal all floor tiles
+            for (let y = 0; y < MAP_H; y++) {
+                for (let x = 0; x < MAP_W; x++) {
+                    if (map[y][x] === '.') {
+                        visible[y][x] = true;
+                    }
+                }
+            }
+            addLog('🗺 Map! The whole floor is revealed.', 'pickup');
+            break;
+        case 'key':
+            player.keys += 1;
+            addLog(`🗝 Key! You have ${player.keys} key(s).`, 'pickup');
             break;
     }
 }
@@ -865,12 +1132,14 @@ function addLog(msg, type) {
 }
 
 function showGameOver(won) {
+    gameActive = false;
+    localStorage.removeItem('fox-dungeon-save');
+    updateHighScore();
     document.getElementById('game-over').classList.add('show');
     document.getElementById('go-title').textContent = won ? '🏆 Victory!' : 'The fox falls...';
     document.getElementById('go-floor').textContent = `Reached: Floor ${floor}`;
     document.getElementById('go-gold').textContent = `Gold: ${player.gold}`;
     document.getElementById('go-enemies').textContent = `Enemies defeated: ${enemiesDefeated}`;
-    updateHighScore();
 }
 
 function updateHighScore() {
@@ -884,10 +1153,13 @@ function updateHighScore() {
 }
 
 function newGame() {
+    localStorage.removeItem('fox-dungeon-save');
     document.getElementById('game-over').classList.remove('show');
-    player = { x: 1, y: 1, hp: 20, maxHp: 20, atk: 3, shield: 1, shieldActive: false, gold: 0 };
+    document.getElementById('continue-screen').classList.remove('show');
+    player = { x: 1, y: 1, hp: 20, maxHp: 20, atk: 3, shield: 1, shieldActive: false, gold: 0, keys: 0 };
     enemies = [];
     items = [];
+    chests = [];
     floor = 1;
     enemiesDefeated = 0;
     turn = 0;
@@ -898,13 +1170,76 @@ function newGame() {
     render();
 }
 
+// --- Save / Load ---
+function saveCurrent() {
+    if (!gameActive) return;
+    try {
+        const save = {
+            map, visible, inSight,
+            player, enemies, items, chests,
+            stairsPos, floor, enemiesDefeated,
+            turn, gameActive, logs,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('fox-dungeon-save', JSON.stringify(save));
+    } catch (e) {
+        // Storage full or unavailable — silently fail
+    }
+}
+
+function loadSave() {
+    try {
+        const raw = localStorage.getItem('fox-dungeon-save');
+        if (!raw) { newGame(); return; }
+        const save = JSON.parse(raw);
+
+        map           = save.map;
+        visible       = save.visible;
+        inSight       = save.inSight;
+        player        = save.player;
+        enemies       = save.enemies;
+        items         = save.items;
+        chests        = save.chests || [];
+        stairsPos     = save.stairsPos;
+        floor         = save.floor;
+        enemiesDefeated = save.enemiesDefeated;
+        turn          = save.turn;
+        gameActive    = save.gameActive;
+        logs          = save.logs || [];
+
+        // Restore missing fields for older saves
+        if (player.keys === undefined) player.keys = 0;
+        enemies.forEach(e => {
+            if (!e.behavior) {
+                const data = ENEMY_DATA[e.name];
+                e.behavior = data ? data.behavior : 'chase';
+            }
+        });
+
+        // Apply theme
+        const theme = getTheme(floor);
+        document.body.className = theme.cssClass;
+
+        document.getElementById('continue-screen').classList.remove('show');
+        render();
+        // Re-render log
+        const logEl = document.getElementById('log');
+        logEl.innerHTML = logs.slice(0, 2).map(l => `<div class="log-${l.type}">${l.msg}</div>`).join('');
+        addLog("Run resumed. Welcome back, fox.", 'floor');
+    } catch (e) {
+        // Corrupted save — start fresh
+        localStorage.removeItem('fox-dungeon-save');
+        newGame();
+    }
+}
+
 // --- Keyboard controls ---
 document.addEventListener('keydown', (e) => {
     switch (e.key) {
-        case 'ArrowUp': case 'w': move(0, -1); break;
-        case 'ArrowDown': case 's': move(0, 1); break;
-        case 'ArrowLeft': case 'a': move(-1, 0); break;
-        case 'ArrowRight': case 'd': move(1, 0); break;
+        case 'ArrowUp':    case 'w': move(0, -1); break;
+        case 'ArrowDown':  case 's': move(0, 1);  break;
+        case 'ArrowLeft':  case 'a': move(-1, 0); break;
+        case 'ArrowRight': case 'd': move(1, 0);  break;
         case ' ': wait(); break;
         case 'q': activateShield(); break;
         case 'e': attackNearby(); break;
@@ -913,14 +1248,39 @@ document.addEventListener('keydown', (e) => {
 });
 
 // --- Init ---
-generateMap();
-render();
+(function init() {
+    try {
+        const raw = localStorage.getItem('fox-dungeon-save');
+        if (raw) {
+            const save = JSON.parse(raw);
+            if (save && save.gameActive === true) {
+                // Show continue screen
+                document.getElementById('cs-floor').textContent = `Floor: ${save.floor}`;
+                document.getElementById('cs-hp').textContent =
+                    `HP: ${save.player.hp}/${save.player.maxHp}`;
+                document.getElementById('cs-gold').textContent =
+                    `Gold: ${save.player.gold}`;
+                document.getElementById('continue-screen').classList.add('show');
+                // Render a blank dungeon behind overlay
+                generateMap();
+                render();
+                return;
+            }
+        }
+    } catch (e) {
+        localStorage.removeItem('fox-dungeon-save');
+    }
+    // No valid save — fresh start
+    generateMap();
+    render();
+    addLog("A fox enters the dungeon...", 'floor');
+})();
 
 // Show stats
-const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
-const d = stats.dungeon || {};
+const _stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
+const _d = _stats.dungeon || {};
 document.getElementById('stats').textContent =
-    `Best: F${d.bestFloor || 0} | Played: ${d.played || 0} | Enemies: ${d.totalEnemies || 0}`;
+    `Best: F${_d.bestFloor || 0} | Played: ${_d.played || 0} | Enemies: ${_d.totalEnemies || 0}`;
 </script>
 
 <p style="font-size:11px;color:#1e1e3a;margin:8px 0 4px;">built with love by cow & fox</p>
