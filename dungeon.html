@@ -440,9 +440,16 @@ h1 {
 // --- Config ---
 const MAP_W = 9;
 const MAP_H = 9;
-const ENEMIES_PER_FLOOR = 3;
-const ITEMS_PER_FLOOR = 2;
 const TILE_SIZE = 36;
+
+// Graduated enemy count: floor 1=1, 2-3=2, 4-6=3, 7-9=4, 10+=5
+function getEnemyCount(f) {
+    if (f === 1) return 1;
+    if (f <= 3) return 2;
+    if (f <= 6) return 3;
+    if (f <= 9) return 4;
+    return 5;
+}
 
 // --- Enemy data ---
 const ENEMY_DATA = {
@@ -470,30 +477,32 @@ const ENEMY_ICONS = {
     'Skeleton Archer': '💀', 'Lich': '🧙'
 };
 const ITEM_ICONS = {
-    potion: '🧪', gold: '💰', sword: '⚔', shieldItem: '🛡', map: '🗺', key: '🗝'
+    potion: '🧪', gold: '💰', sword: '⚔', shieldItem: '🛡', map: '🗺', key: '🗝',
+    heartContainer: '💖'
 };
 
 // --- Floor themes ---
+// Boss progression: Goblin (F3) → Wolf (F6) → Demon (F9) → Dragon (F12+)
 function getTheme(f) {
     if (f <= 3) return {
         name: 'Cave',
         wallChars: ['▓','▒','█','▓','▒'],
         enemyPool: ['Rat','Rat Archer','Bat','Slime','Goblin'],
-        bossName: 'Wolf',
+        bossName: 'Goblin',
         cssClass: 'theme-cave'
     };
     if (f <= 6) return {
         name: 'Dungeon',
         wallChars: ['█','▓','▓','░','█'],
-        enemyPool: ['Goblin','Goblin Scout','Snake','Spider','Ghost'],
-        bossName: 'Demon',
+        enemyPool: ['Goblin','Goblin Scout','Snake','Spider','Wolf'],
+        bossName: 'Wolf',
         cssClass: 'theme-dungeon'
     };
     if (f <= 9) return {
         name: 'Crypt',
         wallChars: ['░','▓','▒','▓','░'],
-        enemyPool: ['Ghost','Skeleton Archer','Spider','Lich','Wolf'],
-        bossName: 'Lich',
+        enemyPool: ['Ghost','Skeleton Archer','Spider','Lich','Snake'],
+        bossName: 'Demon',
         cssClass: 'theme-crypt'
     };
     return {
@@ -595,7 +604,7 @@ function generateMap() {
     // Place enemies from theme pool
     const patrolDirs = [[1,0],[-1,0],[0,1],[0,-1]];
     enemies = [];
-    for (let i = 0; i < ENEMIES_PER_FLOOR + Math.floor(floor / 2); i++) {
+    for (let i = 0; i < getEnemyCount(floor); i++) {
         const pos = randomFloor();
         if (pos) {
             const name = theme.enemyPool[Math.floor(Math.random() * theme.enemyPool.length)];
@@ -625,8 +634,8 @@ function generateMap() {
             const bdata = ENEMY_DATA[bossName] || { behavior: 'chase', baseHp: 10, baseAtk: 2 };
             const boss = {
                 x: bpos.x, y: bpos.y,
-                hp: bdata.baseHp + floor * 3,
-                atk: bdata.baseAtk + floor,
+                hp: bdata.baseHp + floor * 2,
+                atk: bdata.baseAtk + Math.floor(floor / 2),
                 name: bossName,
                 behavior: bdata.behavior,
                 isBoss: true,
@@ -640,13 +649,16 @@ function generateMap() {
         }
     }
 
-    // Place items
+    // Place items — more on early floors, swords/potions weighted early
     items = [];
-    for (let i = 0; i < ITEMS_PER_FLOOR; i++) {
+    const itemCount = floor <= 3 ? 3 : 2;
+    const earlyPool = ['potion','potion','potion','sword','sword','shieldItem','map','key'];
+    const latePool  = ['potion','potion','gold','sword','shieldItem','map','key','key'];
+    for (let i = 0; i < itemCount; i++) {
         const pos = randomFloor();
         if (pos) {
-            const types = ['potion','potion','gold','sword','shieldItem','map','key','key'];
-            const type = types[Math.floor(Math.random() * types.length)];
+            const pool = floor <= 3 ? earlyPool : latePool;
+            const type = pool[Math.floor(Math.random() * pool.length)];
             items.push({ x: pos.x, y: pos.y, type });
         }
     }
@@ -720,7 +732,8 @@ function render() {
         sword: 'Sword boosts ATK',
         shieldItem: 'Shield charge',
         map: 'Floor map reveals the whole level',
-        key: 'Key opens locked chests'
+        key: 'Key opens locked chests',
+        heartContainer: 'Heart Container increases max HP permanently'
     };
 
     for (let y = 0; y < MAP_H; y++) {
@@ -874,7 +887,7 @@ function move(dx, dy) {
         if (player.keys > 0) {
             player.keys--;
             chests.splice(chests.indexOf(chest), 1);
-            const rewards = ['potion','sword','shieldItem','gold'];
+            const rewards = ['potion','sword','shieldItem','gold','heartContainer'];
             const reward = rewards[Math.floor(Math.random() * rewards.length)];
             pickupItem({ type: reward });
             addLog('🗝 Chest opened!', 'pickup');
@@ -901,6 +914,12 @@ function move(dx, dy) {
     if (nx === stairsPos.x && ny === stairsPos.y) {
         addLog(`Descending to floor ${floor + 1}...`, 'floor');
         floor++;
+        // Milestone max HP rewards at floors 5, 10, 15
+        if ([5, 10, 15].includes(floor)) {
+            player.maxHp += 5;
+            player.hp = Math.min(player.maxHp, player.hp + 5);
+            addLog(`💖 Milestone! Max HP → ${player.maxHp}!`, 'heal');
+        }
         const restHeal = Math.max(3, Math.floor(player.maxHp * 0.3));
         player.hp = Math.min(player.maxHp, player.hp + restHeal);
         addLog(`Rested. +${restHeal} HP. (${player.hp}/${player.maxHp})`, 'heal');
@@ -1135,6 +1154,13 @@ function pickupItem(item) {
             player.keys += 1;
             addLog(`🗝 Key! You have ${player.keys} key(s).`, 'pickup');
             break;
+        case 'heartContainer': {
+            const hpGain = 5;
+            player.maxHp += hpGain;
+            player.hp = Math.min(player.maxHp, player.hp + hpGain);
+            addLog(`💖 Heart Container! Max HP → ${player.maxHp}!`, 'heal');
+            break;
+        }
     }
 }
 
