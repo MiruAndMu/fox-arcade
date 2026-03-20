@@ -373,6 +373,15 @@ h1 {
 }
 
 .stats { font-size: 11px; color: #2a2a3a; margin: 5px 0; }
+
+/* --- Game state summary (accessible to screen readers / ADB text scraping) --- */
+#game-state {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
 </style>
 </head>
 <body>
@@ -414,6 +423,8 @@ h1 {
     <button class="act-btn" id="btn-attack" aria-label="Attack nearby enemy" onclick="attackNearby()">⚔ Attack</button>
     <button class="act-btn" id="btn-look" aria-label="Look around describe surroundings" onclick="lookAround()">👁 Look</button>
 </div>
+
+<div id="game-state" aria-live="polite" aria-atomic="true"></div>
 
 <div class="stats" id="stats"></div>
 
@@ -846,6 +857,9 @@ function render() {
         shieldBtn.classList.remove('shield-active');
         shieldBtn.setAttribute('aria-label', `Activate shield ${player.shield} charges left`);
     }
+
+    // Update accessible game-state summary
+    updateGameState();
 }
 
 // --- D-pad flash: brief highlight on the pressed direction button ---
@@ -1108,6 +1122,7 @@ function lookAround() {
     } else {
         addLog("Nothing interesting nearby.", 'info');
     }
+    updateGameState();
 }
 
 function getDirection(dx, dy) {
@@ -1115,6 +1130,134 @@ function getDirection(dx, dy) {
     const h = dx > 0 ? 'east' : dx < 0 ? 'west' : '';
     const v = dy > 0 ? 'south' : dy < 0 ? 'north' : '';
     return v + (v && h ? '-' : '') + h;
+}
+
+// --- Compact relative offset like "2S-1E" ---
+function getRelativeOffset(dx, dy) {
+    if (dx === 0 && dy === 0) return 'here';
+    let parts = [];
+    if (dy < 0) parts.push(Math.abs(dy) + 'N');
+    if (dy > 0) parts.push(dy + 'S');
+    if (dx < 0) parts.push(Math.abs(dx) + 'W');
+    if (dx > 0) parts.push(dx + 'E');
+    return parts.join('-');
+}
+
+// --- Classify a tile for the game-state summary ---
+function classifyTile(x, y) {
+    if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) return 'wall';
+    if (map[y][x] === '#') return 'wall';
+    const enemy = enemies.find(e => e.x === x && e.y === y);
+    if (enemy) return enemy.isBoss ? 'boss' : 'enemy';
+    if (x === stairsPos.x && y === stairsPos.y) return 'stairs';
+    const chest = chests.find(c => c.x === x && c.y === y);
+    if (chest) return 'chest';
+    const item = items.find(i => i.x === x && i.y === y);
+    if (item) return 'item';
+    if (!visible[y][x]) return 'fog';
+    return 'floor';
+}
+
+// --- Build game-state text for accessibility / ADB scraping ---
+function updateGameState() {
+    const el = document.getElementById('game-state');
+    if (!el) return;
+
+    const theme = getTheme(floor);
+    const parts = [];
+
+    // Line 1: Position + Stats + Floor
+    parts.push(
+        `Fox@(${player.x},${player.y}) HP:${player.hp}/${player.maxHp} ATK:${player.atk} Shield:${player.shield}${player.shieldActive ? '(ACTIVE)' : ''} Gold:${player.gold} Keys:${player.keys} | Floor ${floor} ${theme.name}`
+    );
+
+    // Line 2: Cardinal adjacent tiles
+    const dirs = [
+        { label: 'N', dx: 0, dy: -1 },
+        { label: 'E', dx: 1, dy: 0 },
+        { label: 'S', dx: 0, dy: 1 },
+        { label: 'W', dx: -1, dy: 0 }
+    ];
+
+    const adjParts = [];
+    const pathParts = [];
+
+    for (const d of dirs) {
+        const tx = player.x + d.dx;
+        const ty = player.y + d.dy;
+        const type = classifyTile(tx, ty);
+
+        // Detailed adjacent description
+        if (type === 'enemy' || type === 'boss') {
+            const e = enemies.find(e => e.x === tx && e.y === ty);
+            adjParts.push(`${d.label}:${e.name}(HP:${e.hp},ATK:${e.atk}${e.isBoss ? ',BOSS' : ''})`);
+        } else if (type === 'item') {
+            const it = items.find(i => i.x === tx && i.y === ty);
+            adjParts.push(`${d.label}:${it.type}`);
+        } else {
+            adjParts.push(`${d.label}:${type}`);
+        }
+
+        // Path openness
+        if (type === 'wall') {
+            pathParts.push(`${d.label}:blocked`);
+        } else if (type === 'enemy' || type === 'boss') {
+            pathParts.push(`${d.label}:enemy`);
+        } else {
+            pathParts.push(`${d.label}:open`);
+        }
+    }
+
+    parts.push('Adjacent: ' + adjParts.join(' '));
+    parts.push('Paths: ' + pathParts.join(' '));
+
+    // Line 4: Nearby notable things (enemies, items, chests, stairs) with relative offsets
+    const nearby = [];
+    for (let dy = -4; dy <= 4; dy++) {
+        for (let dx = -4; dx <= 4; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = player.x + dx;
+            const ny = player.y + dy;
+            if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) continue;
+            if (!visible[ny][nx]) continue;
+
+            const offset = getRelativeOffset(dx, dy);
+            const enemy = enemies.find(e => e.x === nx && e.y === ny);
+            if (enemy) {
+                nearby.push(`${enemy.name}(HP:${enemy.hp},ATK:${enemy.atk}${enemy.isBoss ? ',BOSS' : ''}) ${offset}`);
+            }
+            const item = items.find(i => i.x === nx && i.y === ny);
+            if (item) {
+                nearby.push(`${item.type} ${offset}`);
+            }
+            const chest = chests.find(c => c.x === nx && c.y === ny);
+            if (chest) {
+                nearby.push(`chest ${offset}`);
+            }
+            if (nx === stairsPos.x && ny === stairsPos.y) {
+                nearby.push(`Stairs ${offset}`);
+            }
+        }
+    }
+
+    if (nearby.length > 0) {
+        parts.push('Nearby: ' + nearby.join(', '));
+    } else {
+        parts.push('Nearby: nothing visible');
+    }
+
+    // Line 5: Last 2 log messages
+    if (logs.length > 0) {
+        const recentLogs = logs.slice(0, 2).map(l => l.msg);
+        parts.push('Log: ' + recentLogs.join(' | '));
+    }
+
+    // Line 6: Game status
+    if (!gameActive) {
+        parts.push('STATUS: GAME OVER');
+    }
+
+    el.textContent = parts.join('\n');
 }
 
 function pickupItem(item) {
