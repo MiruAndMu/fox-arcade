@@ -259,6 +259,15 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
 .move-num { color: #555; }
 .move-white { color: #ddd; }
 .move-black { color: #999; }
+
+/* --- Game state summary (accessible to screen readers / ADB text scraping) --- */
+#game-state {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
 </style>
 </head>
 <body>
@@ -327,6 +336,9 @@ h1 { color: #f4845f; font-size: 24px; margin: 5px 0; }
     <div class="move-history-label">Move history</div>
     <div class="move-history" id="move-history" aria-label="Move history" aria-live="polite"></div>
 </div>
+
+<!-- Game state summary (accessible to screen readers / ADB text scraping) -->
+<div id="game-state" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 // Piece symbols
@@ -820,6 +832,76 @@ function render() {
     const stats = JSON.parse(localStorage.getItem('fox-arcade-stats') || '{}');
     const cs = stats.chess || {};
     statsEl.textContent = `Won: ${cs.won || 0} | Lost: ${cs.lost || 0} | Drawn: ${cs.drawn || 0}`;
+
+    // Game state for ADB/heartbeat
+    updateChessGameState();
+}
+
+function updateChessGameState() {
+    const el = document.getElementById('game-state');
+    if (!el) return;
+    const parts = [];
+
+    // Line 1: Turn + status
+    let status = isWhiteTurn ? 'White (you) to move' : 'Black (AI) thinking';
+    if (gameOver) {
+        status = document.getElementById('message').textContent || 'Game over';
+    } else if (isInCheck(true, board)) {
+        status = 'White (you) to move — IN CHECK';
+    } else if (isInCheck(false, board)) {
+        status = 'Black in check';
+    }
+    parts.push(status);
+
+    // Line 2: Board rank-by-rank (compact readable)
+    const rankDescs = [];
+    for (let r = 0; r < 8; r++) {
+        const rank = 8 - r;
+        const pieces = [];
+        for (let c = 0; c < 8; c++) {
+            const p = board[r][c];
+            if (p) {
+                const pos = FILES[c] + rank;
+                const name = PIECE_NAMES[p] || p;
+                pieces.push(`${name}@${pos}`);
+            }
+        }
+        if (pieces.length > 0) {
+            rankDescs.push(`Rank${rank}: ${pieces.join(', ')}`);
+        }
+    }
+    parts.push(rankDescs.join(' | '));
+
+    // Line 3: Selected piece and valid moves
+    if (selected) {
+        const [sr, sc] = selected;
+        const piece = board[sr][sc];
+        const pos = FILES[sc] + (8 - sr);
+        const pieceName = PIECE_NAMES[piece] || piece;
+        if (validMoves.length > 0) {
+            const moveList = validMoves.map(([mr, mc]) => {
+                const target = FILES[mc] + (8 - mr);
+                const targetPiece = board[mr][mc];
+                return targetPiece ? `${target}(capture ${PIECE_NAMES[targetPiece]})` : target;
+            }).join(', ');
+            parts.push(`Selected: ${pieceName}@${pos} → can move to: ${moveList}`);
+        } else {
+            parts.push(`Selected: ${pieceName}@${pos} → no valid moves`);
+        }
+    } else if (isWhiteTurn && !gameOver) {
+        parts.push('No piece selected. Tap a white piece to see its moves.');
+    }
+
+    // Line 4: Last move
+    if (moveHistory.length > 0) {
+        const last = moveHistory[moveHistory.length - 1];
+        if (last.notation) {
+            const who = moveHistory.length % 2 === 1 ? 'White' : 'Black';
+            parts.push(`Last move: ${who} ${last.notation}`);
+        }
+    }
+
+    el.textContent = parts.join('\n');
 }
 
 function showMessage(msg) {

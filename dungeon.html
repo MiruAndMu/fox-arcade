@@ -336,7 +336,7 @@ h1 {
     display: none;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,8,0.92);
+    background: rgba(0,0,8,1);
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -1330,6 +1330,9 @@ function showGameOver(won) {
     document.getElementById('go-floor').textContent = `Reached: Floor ${floor}`;
     document.getElementById('go-gold').textContent = `Gold: ${player.gold}`;
     document.getElementById('go-enemies').textContent = `Enemies defeated: ${enemiesDefeated}`;
+    // Set game-state to GAME OVER so heartbeat knows to tap New Game
+    document.getElementById('game-state').textContent =
+        `GAME OVER: ${won ? 'Victory!' : 'The fox falls...'} Reached Floor ${floor}, Gold ${player.gold}, ${enemiesDefeated} enemies defeated. Tap "New Game" to play again.`;
 }
 
 function updateHighScore() {
@@ -1346,6 +1349,7 @@ function newGame() {
     localStorage.removeItem('fox-dungeon-save');
     document.getElementById('game-over').classList.remove('show');
     document.getElementById('continue-screen').classList.remove('show');
+    document.getElementById('dungeon-container').style.display = '';
     player = { x: 1, y: 1, hp: 20, maxHp: 20, atk: 3, shield: 1, shieldActive: false, gold: 0, keys: 0 };
     enemies = [];
     items = [];
@@ -1411,6 +1415,7 @@ function loadSave() {
         document.body.className = theme.cssClass;
 
         document.getElementById('continue-screen').classList.remove('show');
+        document.getElementById('dungeon-container').style.display = '';
         render();
         // Re-render log
         const logEl = document.getElementById('log');
@@ -1451,9 +1456,11 @@ document.addEventListener('keydown', (e) => {
                 document.getElementById('cs-gold').textContent =
                     `Gold: ${save.player.gold}`;
                 document.getElementById('continue-screen').classList.add('show');
-                // Render a blank dungeon behind overlay
-                generateMap();
-                render();
+                // Hide dungeon grid so ghost tiles don't appear in UI tree
+                document.getElementById('dungeon-container').style.display = 'none';
+                // Set game-state to MENU so heartbeat knows to tap a button
+                document.getElementById('game-state').textContent =
+                    `MENU: Tap "Continue Run" to resume Floor ${save.floor} run (HP:${save.player.hp}/${save.player.maxHp}, Gold:${save.player.gold}) or tap "New Game" to start fresh.`;
                 return;
             }
         }
