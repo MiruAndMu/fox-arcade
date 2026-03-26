@@ -1740,9 +1740,9 @@ function showStats() {
 
 // --- Keyboard input (for ADB keyevents) ---
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleKey('ENTER');
-    else if (e.key === 'Backspace') handleKey('DEL');
-    else if (/^[a-zA-Z]$/.test(e.key)) handleKey(e.key.toUpperCase());
+    if (e.key === 'Enter') { e.preventDefault(); handleKey('ENTER'); }
+    else if (e.key === 'Backspace') { e.preventDefault(); handleKey('DEL'); }
+    else if (/^[a-zA-Z]$/.test(e.key)) { e.preventDefault(); handleKey(e.key.toUpperCase()); }
 });
 
 // --- Init ---
