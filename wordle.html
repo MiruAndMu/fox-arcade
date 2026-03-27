@@ -1558,6 +1558,13 @@ function submitGuess() {
         }
         showMessage('Not in word list', 2000);
         shakeRow(currentRow);
+        // Auto-clear the row after shake so player can try again fresh
+        setTimeout(() => {
+            for (let c = 0; c < 5; c++) {
+                document.getElementById(`cell-${currentRow}-${c}`).textContent = '';
+            }
+            currentCol = 0;
+        }, 600);
         return;
     }
 
