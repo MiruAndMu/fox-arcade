@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f4845f">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
 <title>Fox Wordle</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -188,6 +191,11 @@ h1 {
 </head>
 <body>
 
+<!-- Hidden game input: autofocused, captures ADB keyevents. inputmode=none prevents soft keyboard. -->
+<input id="game-input" type="text" inputmode="none" autofocus
+       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+       aria-label="Game input — type letters to play"
+       style="position:fixed;top:50%;left:50%;width:2px;height:2px;opacity:0;border:0;outline:0;padding:0;transform:translateX(-50%);">
 <div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">Back to Arcade</a></div>
 <h1>Fox Wordle</h1>
 <div class="message" id="message" aria-live="polite"></div>
@@ -1751,12 +1759,21 @@ function showStats() {
         `played ${w.played || 0}  ·  won ${w.won || 0} (${winRate}%)  ·  streak ${w.streak || 0}  ·  best ${w.best || '—'}`;
 }
 
-// --- Keyboard input (for ADB keyevents) ---
-document.addEventListener('keydown', (e) => {
+// --- Keyboard input (physical keys + ADB keyevents) ---
+// #game-input is a hidden input with autofocus that captures ADB keyevents.
+// inputmode="none" prevents the soft keyboard from appearing on Android.
+// This keeps Chrome's address bar from stealing key input during heartbeat play.
+// The document listener below is a fallback when focus drifts elsewhere.
+const _gi = document.getElementById('game-input');
+function _routeKey(e) {
     if (e.key === 'Enter') { e.preventDefault(); handleKey('ENTER'); }
     else if (e.key === 'Backspace') { e.preventDefault(); handleKey('DEL'); }
     else if (/^[a-zA-Z]$/.test(e.key)) { e.preventDefault(); handleKey(e.key.toUpperCase()); }
-});
+}
+_gi.addEventListener('keydown', _routeKey);
+document.addEventListener('keydown', (e) => { if (e.target !== _gi) _routeKey(e); });
+// After any touch, re-focus game input so address bar can't hold key events
+document.addEventListener('touchend', () => { if (document.activeElement !== _gi) _gi.focus(); }, { passive: true });
 
 // --- Init ---
 answer = getDailyWord();

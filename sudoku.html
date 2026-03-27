@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f4845f">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
 <title>Fox Sudoku</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -250,6 +253,11 @@ h1 {
 </head>
 <body>
 
+<!-- Hidden game input: autofocused, captures ADB keyevents. inputmode=none prevents soft keyboard. -->
+<input id="game-input" type="text" inputmode="none" autofocus
+       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+       aria-label="Game input — type numbers to play"
+       style="position:fixed;top:50%;left:50%;width:2px;height:2px;opacity:0;border:0;outline:0;padding:0;transform:translateX(-50%);">
 <div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">Back to Arcade</a></div>
 <h1>Fox Sudoku</h1>
 
@@ -715,12 +723,17 @@ function loadGame() {
     } catch (e) { return false; }
 }
 
-// Keyboard support
-document.addEventListener('keydown', (e) => {
+// Keyboard support — routed through hidden game input to prevent Chrome address
+// bar from stealing ADB keyevents during heartbeat gameplay.
+const _gi = document.getElementById('game-input');
+function _routeKey(e) {
     if (e.key >= '1' && e.key <= '9') placeNumber(parseInt(e.key));
     else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') placeNumber(0);
     else if (e.key.toLowerCase() === 'n') toggleNotes();
-});
+}
+_gi.addEventListener('keydown', _routeKey);
+document.addEventListener('keydown', (e) => { if (e.target !== _gi) _routeKey(e); });
+document.addEventListener('touchend', () => { if (document.activeElement !== _gi) _gi.focus(); }, { passive: true });
 
 // ===== INIT =====
 if (!loadGame()) {
