@@ -1532,6 +1532,9 @@ function handleKey(key) {
     } else if (key === 'ENTER') {
         if (currentCol === 5) submitGuess();
     } else if (currentCol < 5) {
+        // Clear any lingering rejection message when player starts typing again
+        const msgEl = document.getElementById('message');
+        if (msgEl.textContent) { msgEl.textContent = ''; }
         const cell = document.getElementById(`cell-${currentRow}-${currentCol}`);
         cell.textContent = key;
         cell.className = 'cell filled';
@@ -1553,15 +1556,18 @@ function submitGuess() {
     }
 
     if (!WORDS.includes(guess.toLowerCase())) {
-        if (!rejectedWords.includes(guess)) {
+        const alreadyTried = rejectedWords.includes(guess);
+        if (!alreadyTried) {
             rejectedWords.push(guess);
         }
-        showMessage('Not in word list', 2000);
+        // Persistent message — stays until next keypress (no auto-clear timer)
+        showMessage(alreadyTried ? `${guess} is not a word — try something different` : `${guess} not in word list — row cleared`);
         shakeRow(currentRow);
         // Auto-clear the row after shake so player can try again fresh
         setTimeout(() => {
             for (let c = 0; c < 5; c++) {
                 document.getElementById(`cell-${currentRow}-${c}`).textContent = '';
+                document.getElementById(`cell-${currentRow}-${c}`).setAttribute('aria-label', `Row ${currentRow + 1} Column ${c + 1} Empty`);
             }
             currentCol = 0;
         }, 600);
