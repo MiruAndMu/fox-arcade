@@ -693,10 +693,7 @@ function handleMessage(data) {
             break;
         case 'result':
             handleFireResult(data.r, data.c, data.result, data.shipName, data.shipCells);
-            // after getting result, it's now my turn again
-            myTurn = true;
-            updateTurnBar();
-            renderAttackGrid();
+            // don't set myTurn here — wait for opponent to fire back
             break;
     }
 }
