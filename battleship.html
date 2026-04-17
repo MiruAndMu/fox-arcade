@@ -693,10 +693,10 @@ function handleMessage(data) {
             break;
         case 'result':
             handleFireResult(data.r, data.c, data.result, data.shipName, data.shipCells);
-            break;
-        case 'turn':
+            // after getting result, it's now my turn again
             myTurn = true;
             updateTurnBar();
+            renderAttackGrid();
             break;
     }
 }
@@ -886,10 +886,9 @@ function handleIncomingFire(r, c) {
         return;
     }
 
-    // give them feedback, then it's my turn
+    // now it's my turn to fire back
     setTimeout(() => {
         myTurn = true;
-        sendMsg({ type: 'turn' });
         updateTurnBar();
         renderAttackGrid();
     }, 300);
