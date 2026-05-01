@@ -129,6 +129,57 @@ body {
     z-index: 1;
 }
 
+/* === MODE TOGGLE === */
+.mode-toggle {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 8px;
+    width: calc(100% - 32px);
+    max-width: 420px;
+    padding: 5px;
+    margin-top: 12px;
+    border: 1px solid rgba(244,132,95,0.24);
+    border-radius: 999px;
+    background: rgba(13, 24, 40, 0.78);
+    box-shadow: 0 0 18px rgba(244,132,95,0.08);
+}
+
+.mode-toggle button {
+    flex: 1;
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 8px;
+    background: transparent;
+    color: #7a8e9e;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.mode-toggle button.active {
+    color: #fff4e8;
+    background: linear-gradient(135deg, rgba(244,132,95,0.95), rgba(233,69,96,0.82));
+    box-shadow: 0 4px 16px rgba(244,132,95,0.28);
+}
+
+.mode-note {
+    position: relative;
+    z-index: 1;
+    width: calc(100% - 32px);
+    max-width: 420px;
+    margin-top: 7px;
+    color: #6a7d90;
+    font-size: 10px;
+    line-height: 1.45;
+    letter-spacing: 0.8px;
+    text-align: center;
+}
+
 /* === GAME CARD === */
 .game-card {
     background: linear-gradient(145deg, #16213e 0%, #0d1828 100%);
@@ -147,6 +198,10 @@ body {
         box-shadow 0.28s ease,
         border-color 0.28s ease,
         background 0.28s ease;
+}
+
+.game-card.mode-hidden {
+    display: none;
 }
 
 /* Top-edge shimmer line */
@@ -300,9 +355,19 @@ body {
 
 <div class="divider" aria-hidden="true">— ✦ — ✦ — ✦ —</div>
 
+<div class="mode-toggle" role="group" aria-label="Fox Arcade play mode">
+    <button id="single-mode-btn" class="active" type="button" aria-pressed="true" onclick="setArcadeMode('single')">
+        Single Player
+    </button>
+    <button id="multi-mode-btn" type="button" aria-pressed="false" onclick="setArcadeMode('multi')">
+        Multiplayer
+    </button>
+</div>
+<div id="mode-note" class="mode-note">Solo den is the default. Multiplayer is opt-in for Mu and Miru sessions.</div>
+
 <!-- Game grid -->
 <div class="games-grid">
-    <a href="wordle.html" class="game-card" aria-label="Play Fox Wordle">
+    <a href="wordle.html" class="game-card" data-multiplayer="false" data-single-href="wordle.html" aria-label="Play Fox Wordle">
         <span class="paw" aria-hidden="true">🐾</span>
         <div class="icon" aria-hidden="true">🦊</div>
         <div class="name">Fox Wordle</div>
@@ -311,7 +376,7 @@ body {
         <div class="badge" aria-hidden="true"></div>
     </a>
 
-    <a href="canvas.html" class="game-card" aria-label="Play Fox Canvas">
+    <a href="canvas.html" class="game-card" data-multiplayer="false" data-single-href="canvas.html" aria-label="Play Fox Canvas">
         <span class="paw" aria-hidden="true">🐾</span>
         <div class="icon" aria-hidden="true">🎨</div>
         <div class="name">Fox Canvas</div>
@@ -320,7 +385,7 @@ body {
         <div class="badge" aria-hidden="true"></div>
     </a>
 
-    <a href="memory.html" class="game-card" aria-label="Play Fox Memory">
+    <a href="memory.html" class="game-card" data-multiplayer="false" data-single-href="memory.html" aria-label="Play Fox Memory">
         <span class="paw" aria-hidden="true">🐾</span>
         <div class="icon" aria-hidden="true">🃏</div>
         <div class="name">Fox Memory</div>
@@ -329,7 +394,7 @@ body {
         <div class="badge" aria-hidden="true"></div>
     </a>
 
-    <a href="dungeon.html" class="game-card" aria-label="Play Fox Mystery Dungeon">
+    <a href="dungeon.html" class="game-card" data-multiplayer="false" data-single-href="dungeon.html" aria-label="Play Fox Mystery Dungeon">
         <span class="paw" aria-hidden="true">🐾</span>
         <div class="icon" aria-hidden="true">⚔️</div>
         <div class="name">Fox Dungeon</div>
@@ -338,7 +403,7 @@ body {
         <div class="badge" aria-hidden="true"></div>
     </a>
 
-    <a href="chess.html" class="game-card" aria-label="Play Fox Chess">
+    <a href="chess.html" class="game-card" data-multiplayer="true" data-single-href="chess.html" data-multi-href="chess.html?mode=multi" data-single-desc="Play against the AI" data-multi-desc="Create or join a room" data-single-label="Play Fox Chess" data-multi-label="Play Fox Chess Multiplayer" aria-label="Play Fox Chess">
         <span class="paw" aria-hidden="true">🐾</span>
         <div class="icon" aria-hidden="true">♟️</div>
         <div class="name">Fox Chess</div>
@@ -347,7 +412,7 @@ body {
         <div class="badge" aria-hidden="true"></div>
     </a>
 
-    <a href="sudoku.html" class="game-card" aria-label="Play Fox Sudoku">
+    <a href="sudoku.html" class="game-card" data-multiplayer="false" data-single-href="sudoku.html" aria-label="Play Fox Sudoku">
         <span class="paw" aria-hidden="true">🐾</span>
         <div class="icon" aria-hidden="true">🔢</div>
         <div class="name">Fox Sudoku</div>
@@ -356,7 +421,7 @@ body {
         <div class="badge" aria-hidden="true"></div>
     </a>
 
-    <a href="battleship.html" class="game-card" aria-label="Play Fox Battleship">
+    <a href="battleship.html" class="game-card" data-multiplayer="true" data-single-href="battleship.html" data-multi-href="battleship.html?mode=multi" data-single-desc="Solo mission against the fleet" data-multi-desc="Create or join a room" data-single-label="Play Fox Battleship" data-multi-label="Play Fox Battleship Multiplayer" aria-label="Play Fox Battleship">
         <span class="paw" aria-hidden="true">🐾</span>
         <div class="icon" aria-hidden="true">🚢</div>
         <div class="name">Fox Battleship</div>
@@ -400,6 +465,47 @@ if (stats.sudoku) {
     document.getElementById('sudoku-stat').textContent =
         `Won: ${s.won || 0} | Played: ${s.played || 0}`;
 }
+
+// ─── SINGLE / MULTIPLAYER ARCADE MODE ─────────────────────────────────────
+function setArcadeMode(mode) {
+    const multiplayer = mode === 'multi';
+    const singleBtn = document.getElementById('single-mode-btn');
+    const multiBtn = document.getElementById('multi-mode-btn');
+    const note = document.getElementById('mode-note');
+
+    singleBtn.classList.toggle('active', !multiplayer);
+    singleBtn.setAttribute('aria-pressed', String(!multiplayer));
+    multiBtn.classList.toggle('active', multiplayer);
+    multiBtn.setAttribute('aria-pressed', String(multiplayer));
+
+    note.textContent = multiplayer
+        ? 'Multiplayer den: only games with room play are shown.'
+        : 'Solo den is the default. Multiplayer is opt-in for Mu and Miru sessions.';
+
+    document.querySelectorAll('.game-card').forEach(card => {
+        const supportsMultiplayer = card.dataset.multiplayer === 'true';
+        const hidden = multiplayer && !supportsMultiplayer;
+        card.classList.toggle('mode-hidden', hidden);
+        card.setAttribute('aria-hidden', String(hidden));
+        card.tabIndex = hidden ? -1 : 0;
+
+        const href = multiplayer
+            ? (card.dataset.multiHref || card.dataset.singleHref || card.getAttribute('href'))
+            : (card.dataset.singleHref || card.getAttribute('href'));
+        card.setAttribute('href', href);
+
+        const label = multiplayer
+            ? (card.dataset.multiLabel || card.dataset.singleLabel)
+            : (card.dataset.singleLabel || card.getAttribute('aria-label'));
+        if (label) card.setAttribute('aria-label', label);
+
+        const desc = card.querySelector('.desc');
+        const nextDesc = multiplayer ? card.dataset.multiDesc : card.dataset.singleDesc;
+        if (desc && nextDesc) desc.textContent = nextDesc;
+    });
+}
+
+setArcadeMode('single');
 
 // ─── STARFIELD ─────────────────────────────────────────────────────────────
 (function () {

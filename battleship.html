@@ -67,6 +67,7 @@ h1 {
     padding: 10px 0;
     font-size: 14px;
 }
+body.multiplayer-entry .solo-entry { display: none; }
 
 .room-code {
     font-size: 32px;
@@ -246,10 +247,10 @@ h1 {
 
 <!-- MENU SCREEN -->
 <div id="menu-screen" class="screen active">
-    <p style="color:#7f8c8d; margin: 12px 0; text-align:center; font-size:13px;">
+    <p id="menu-subtitle" style="color:#7f8c8d; margin: 12px 0; text-align:center; font-size:13px;">
         Place your fleet. Sink theirs first. 🦊
     </p>
-    <button class="menu-btn" onclick="startSolo()">🎯 Solo Mission</button>
+    <button class="menu-btn solo-entry" onclick="startSolo()">🎯 Solo Mission</button>
     <button class="menu-btn" onclick="showCreate()">🔗 Create Room</button>
     <button class="menu-btn" onclick="showJoin()">🚪 Join Room</button>
 </div>
@@ -1048,7 +1049,21 @@ confirmPlacement = function() {
 };
 
 // === INIT ===
-// auto-select first ship on placement
+function initFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const multiplayerEntry = params.get('mode') === 'multi';
+    document.body.classList.toggle('multiplayer-entry', multiplayerEntry);
+    document.getElementById('menu-subtitle').textContent = multiplayerEntry
+        ? 'Create or join a multiplayer fleet room. 🦊'
+        : 'Place your fleet. Sink theirs first. 🦊';
+    if (multiplayerEntry) {
+        showScreen('menu-screen');
+        return;
+    }
+    startSolo();
+}
+
+initFromUrl();
 </script>
 </body>
 </html>
