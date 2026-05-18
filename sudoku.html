@@ -54,6 +54,16 @@ h1 {
 }
 .message.success { color: #4ecb71; font-size: 16px; }
 
+.assist-status {
+    width: min(340px, calc(100vw - 24px));
+    min-height: 18px;
+    color: #8eb4e0;
+    font-size: 11px;
+    line-height: 1.35;
+    text-align: center;
+    margin: 1px 0 4px;
+}
+
 /* ===== GRID ===== */
 .grid {
     display: grid;
@@ -268,6 +278,7 @@ h1 {
     &nbsp;|&nbsp; ⏱ <span class="timer-val" id="timer">0:00</span>
 </div>
 <div class="message" id="message" aria-live="polite"></div>
+<div class="assist-status" id="assist-status" aria-live="polite" aria-atomic="true"></div>
 
 <div class="grid" id="grid"></div>
 
@@ -500,6 +511,46 @@ function checkErrors() {
     );
 }
 
+function getCandidates(r, c) {
+    if (puzzle[r][c] !== 0 || player[r][c] !== 0) return [];
+    const candidates = [];
+    for (let n = 1; n <= 9; n++) {
+        let ok = true;
+        for (let i = 0; i < 9; i++) {
+            if (player[r][i] === n || player[i][c] === n) ok = false;
+        }
+        const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+        for (let rr = br; rr < br + 3; rr++) {
+            for (let cc = bc; cc < bc + 3; cc++) {
+                if (player[rr][cc] === n) ok = false;
+            }
+        }
+        if (ok) candidates.push(n);
+    }
+    return candidates;
+}
+
+function updateAssistStatus() {
+    const el = document.getElementById('assist-status');
+    if (!selectedCell) {
+        el.textContent = 'No cell selected. Tap an empty cell, then type 1-9 or tap Place number.';
+        return;
+    }
+    const [r, c] = selectedCell;
+    const pos = `row ${r + 1} column ${c + 1}`;
+    if (puzzle[r][c] !== 0) {
+        el.textContent = `Selected ${pos}: given ${puzzle[r][c]}. Given clues cannot change.`;
+        return;
+    }
+    const val = player[r][c];
+    if (val !== 0) {
+        el.textContent = `Selected ${pos}: placed ${val}. Type another number to replace it, or use Clear.`;
+        return;
+    }
+    const candidates = getCandidates(r, c);
+    el.textContent = `Selected ${pos}: empty. Candidates by current board: ${candidates.join(', ') || 'none'}. Type 1-9 or tap Place number.`;
+}
+
 function toggleNotes() {
     notesMode = !notesMode;
     const btn = document.getElementById('notes-toggle');
@@ -681,6 +732,7 @@ function render() {
     for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) if (player[r][c] !== 0) filled++;
     document.getElementById('filled-count').textContent = filled;
     document.getElementById('error-count').textContent = errors;
+    updateAssistStatus();
 }
 
 // ===== PERSISTENCE =====
@@ -727,11 +779,22 @@ function loadGame() {
 // bar from stealing ADB keyevents during heartbeat gameplay.
 const _gi = document.getElementById('game-input');
 function _routeKey(e) {
-    if (e.key >= '1' && e.key <= '9') placeNumber(parseInt(e.key));
-    else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') placeNumber(0);
-    else if (e.key.toLowerCase() === 'n') toggleNotes();
+    if (e.key >= '1' && e.key <= '9') { e.preventDefault(); placeNumber(parseInt(e.key)); }
+    else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { e.preventDefault(); placeNumber(0); }
+    else if (e.key.toLowerCase() === 'n') { e.preventDefault(); toggleNotes(); }
+    _gi.value = '';
+}
+function _routeTypedInput() {
+    const raw = _gi.value || '';
+    _gi.value = '';
+    for (const ch of raw) {
+        if (ch >= '1' && ch <= '9') placeNumber(parseInt(ch));
+        else if (ch === '0') placeNumber(0);
+        else if (ch.toLowerCase() === 'n') toggleNotes();
+    }
 }
 _gi.addEventListener('keydown', _routeKey);
+_gi.addEventListener('input', _routeTypedInput);
 document.addEventListener('keydown', (e) => { if (e.target !== _gi) _routeKey(e); });
 document.addEventListener('touchend', () => { if (document.activeElement !== _gi) _gi.focus(); }, { passive: true });
 

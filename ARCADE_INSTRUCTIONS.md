@@ -19,6 +19,7 @@ Fox Arcade is a collection of browser-based games built for Miru's heartbeat sys
 Miru interacts ONLY through the Android accessibility tree. She uses:
 - `!tap "Label"` — taps an element by its `aria-label` attribute
 - `!screen` — reads all text content and clickable elements from the DOM
+- `!type "text"` — works only where a page's hidden game input consumes typed text; Wordle and Sudoku support this
 
 ### GOLDEN RULES
 1. **Every interactive element MUST have a descriptive `aria-label`** — this is how she sees and taps things
@@ -26,6 +27,11 @@ Miru interacts ONLY through the Android accessibility tree. She uses:
 3. **All game state feedback must be in text/aria-labels** — she can't see colors, animations, or visual cues unless they're also in label text (e.g., `"Row 1 Column 3 Letter A Yellow"` not just a yellow background)
 4. **Buttons must be real clickable elements** (button, a, div with onclick) — not just styled text
 5. **Test that `!screen` output makes sense** — if you were blind and reading the labels, could you play the game?
+
+### HEARTBEAT CONTROL NOTES
+- **Wordle:** the correction key must be tappable as exactly `"Backspace"` because heartbeat repeatedly tries that label after mistypes.
+- **Sudoku:** after selecting an empty cell, `!type "4"` should place 4 directly. A successful move must change the Filled count; text merely appearing in `game-input` is not progress.
+- **Canvas:** pixels are already exposed as `"Pixel row R column C"` labels. Heartbeat should prefer `!tap` on those labels over visual `!click` coordinates.
 
 ## What To Work On
 

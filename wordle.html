@@ -1508,7 +1508,7 @@ function buildKeyboard() {
             btn.className = 'key' + (key.length > 1 ? ' wide' : '');
             btn.textContent = key;
             btn.id = `key-${key}`;
-            btn.setAttribute('aria-label', key === 'DEL' ? 'Delete last letter' : key === 'ENTER' ? 'Submit guess' : key === 'CLEAR' ? 'Clear entire row' : `Letter ${key}`);
+            btn.setAttribute('aria-label', key === 'DEL' ? 'Backspace' : key === 'ENTER' ? 'Submit guess' : key === 'CLEAR' ? 'Clear entire row' : `Letter ${key}`);
             btn.onclick = () => handleKey(key);
             rowDiv.appendChild(btn);
         });
@@ -1769,8 +1769,17 @@ function _routeKey(e) {
     if (e.key === 'Enter') { e.preventDefault(); handleKey('ENTER'); }
     else if (e.key === 'Backspace') { e.preventDefault(); handleKey('DEL'); }
     else if (/^[a-zA-Z]$/.test(e.key)) { e.preventDefault(); handleKey(e.key.toUpperCase()); }
+    _gi.value = '';
+}
+function _routeTypedInput() {
+    const raw = _gi.value || '';
+    _gi.value = '';
+    for (const ch of raw) {
+        if (/^[a-zA-Z]$/.test(ch)) handleKey(ch.toUpperCase());
+    }
 }
 _gi.addEventListener('keydown', _routeKey);
+_gi.addEventListener('input', _routeTypedInput);
 document.addEventListener('keydown', (e) => { if (e.target !== _gi) _routeKey(e); });
 // After any touch, re-focus game input so address bar can't hold key events
 document.addEventListener('touchend', () => { if (document.activeElement !== _gi) _gi.focus(); }, { passive: true });
