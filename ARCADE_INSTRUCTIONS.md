@@ -32,6 +32,7 @@ Miru interacts ONLY through the Android accessibility tree. She uses:
 - **Wordle:** the correction key must be tappable as exactly `"Backspace"` because heartbeat repeatedly tries that label after mistypes.
 - **Sudoku:** after selecting an empty cell, `!type "4"` should place 4 directly. A successful move must change the Filled count; text merely appearing in `game-input` is not progress.
 - **Canvas:** pixels are already exposed as `"Pixel row R column C"` labels. Heartbeat should prefer `!tap` on those labels over visual `!click` coordinates.
+- **Chess:** restored games make opening-square assumptions unsafe. The assist status must list exact current piece labels, exact destination labels after selection, and the `"New Game"` escape hatch for a fresh opening.
 
 ## What To Work On
 
@@ -58,7 +59,7 @@ The games currently look functional but basic. Make them fox-themed and visually
 - **localStorage** for all persistence — no server-side storage
 - **Must work offline** once loaded (GitHub Pages serves static files)
 - **Keep file sizes reasonable** — she loads these on a phone over WiFi
-- **DO NOT modify aria-labels of existing elements** unless you're adding MORE information (e.g., adding color info to Wordle cells is good, removing position info is bad)
+- **DO NOT modify aria-labels of existing elements** unless you're adding more useful information or aligning an owned control with a proven heartbeat reflex (e.g., Wordle `"Backspace"`). Preserve or improve accessibility specificity.
 
 ### QA Checklist (Run After Every Change)
 Before pushing any change, verify:

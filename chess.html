@@ -102,6 +102,20 @@ body.multiplayer-entry .solo-entry { display: none; }
     letter-spacing: 0.3px;
 }
 
+.assist-status {
+    width: 100%;
+    max-width: 360px;
+    margin: 4px 0 6px;
+    padding: 7px 10px;
+    border: 1px solid rgba(244,132,95,0.35);
+    border-radius: 8px;
+    background: rgba(15,52,96,0.25);
+    color: #cfd6e6;
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: left;
+}
+
 /* === NOTIFICATION BARS (draw offer, undo request) === */
 .notify-bar {
     display: none;
@@ -325,6 +339,7 @@ body.multiplayer-entry .solo-entry { display: none; }
         <span id="turn-badge" class="turn-badge your-turn">Your turn (White)</span>
     </div>
     <div class="message" id="message" aria-live="polite"></div>
+    <div id="chess-assist-status" class="assist-status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Pieces captured by opponent (your pieces taken) -->
     <div class="captured-section">
@@ -496,6 +511,15 @@ function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
 
 function moveKey(fr, fc, tr, tc) { return FILES[fc]+(8-fr)+FILES[tc]+(8-tr); }
 function getGameKey() { return moveHistory.map(m=>moveKey(m.from[0],m.from[1],m.to[0],m.to[1])).join(' '); }
+function squareName(r, c) { return FILES[c] + (8-r); }
+function pieceTapLabel(r, c) {
+    const piece = board[r] && board[r][c];
+    return piece ? `${PIECE_NAMES[piece]} at ${squareName(r,c)}` : `Empty ${squareName(r,c)}`;
+}
+function moveTapLabel(r, c) {
+    const piece = board[r] && board[r][c];
+    return piece ? `${PIECE_NAMES[piece]} at ${squareName(r,c)}` : `Move to ${squareName(r,c)}`;
+}
 
 function toAlgebraicNotation(fr, fc, tr, tc, piece, capturedPiece, isPromotion, promotion) {
     const type = piece.toUpperCase();
@@ -1044,7 +1068,64 @@ function render() {
     }
 
     updateMoveHistory();
+    updateChessAssistStatus();
     updateChessGameState();
+}
+
+function getActivePlayerIsWhite() {
+    if (gameMode === 'multi') return myColor === 'white';
+    return true;
+}
+
+function summarizeMovablePieces(white, limit) {
+    const pieces = [];
+    for (let r=0;r<8;r++) {
+        for (let c=0;c<8;c++) {
+            const piece = board[r][c];
+            if (!isOwn(piece, white)) continue;
+            const moves = getMoves(r, c, board);
+            if (moves.length) pieces.push(`${pieceTapLabel(r,c)} (${moves.length})`);
+        }
+    }
+    if (!pieces.length) return 'none';
+    const shown = pieces.slice(0, limit);
+    const suffix = pieces.length > limit ? `; +${pieces.length-limit} more` : '';
+    return shown.join('; ') + suffix;
+}
+
+function updateChessAssistStatus() {
+    const el = document.getElementById('chess-assist-status'); if (!el) return;
+    const parts = [];
+
+    if (gameOver) {
+        parts.push('Game over. Tap "New Game" for a fresh game.');
+    } else if (gameMode === 'multi' && !isMyTurnMP) {
+        parts.push("Opponent's turn. Wait; do not tap board squares yet.");
+    } else if (gameMode === 'solo' && !isWhiteTurn) {
+        parts.push('AI turn. Wait; do not tap board squares yet.');
+    } else if (selected) {
+        const [sr,sc] = selected;
+        const selectedLabel = pieceTapLabel(sr, sc);
+        if (validMoves.length) {
+            const destinations = validMoves.map(([mr,mc]) => `"${moveTapLabel(mr,mc)}"`).join(', ');
+            parts.push(`Selected ${selectedLabel}. Legal destination tap labels: ${destinations}.`);
+        } else {
+            parts.push(`Selected ${selectedLabel}. No legal moves; tap a different current piece label.`);
+        }
+    } else {
+        const sideIsWhite = getActivePlayerIsWhite();
+        const sideName = sideIsWhite ? 'White' : 'Black';
+        parts.push(`${sideName} to move. Tap an exact current piece label from this list: ${summarizeMovablePieces(sideIsWhite, 14)}.`);
+    }
+
+    if (gameMode === 'solo' && moveHistory.length > 0 && isWhiteTurn && !selected && !gameOver) {
+        parts.push('This is a restored/in-progress board; do not assume opening labels like "White Pawn at e2". Tap "New Game" first if you want a fresh opening.');
+    }
+
+    if (!gameOver && !(gameMode === 'multi' && !isMyTurnMP) && !(gameMode === 'solo' && !isWhiteTurn)) {
+        parts.push('After selecting a piece, run !screen again and tap one of the exact destination labels.');
+    }
+    el.textContent = parts.join(' ');
 }
 
 function updateChessGameState() {
@@ -1141,7 +1222,7 @@ function showHint() {
     }
     if(bestMoves.length>0) {
         const [fr,fc,tr,tc]=bestMoves[Math.floor(Math.random()*bestMoves.length)];
-        showMessage(`Hint: ${PIECE_NAMES[board[fr][fc]]} ${FILES[fc]+(8-fr)} → ${FILES[tc]+(8-tr)}`);
+        showMessage(`Hint: tap "${pieceTapLabel(fr,fc)}", then tap "${moveTapLabel(tr,tc)}"`);
     }
 }
 
