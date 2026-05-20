@@ -65,6 +65,20 @@ h1 {
 .log-shield { color: #87ceeb; }
 .log-warn { color: #f4845f; }
 
+.assist-status {
+    width: 90%;
+    max-width: 400px;
+    margin: 4px 0 6px;
+    padding: 7px 10px;
+    border: 1px solid rgba(244,132,95,0.35);
+    border-radius: 8px;
+    background: rgba(13,13,34,0.82);
+    color: #cfd6e6;
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: left;
+}
+
 /* --- Dungeon grid --- */
 .dungeon-container {
     margin: 6px 0;
@@ -401,6 +415,8 @@ h1 {
 <div class="log" id="log" aria-live="polite">
     <div class="log-floor">A fox enters the dungeon...</div>
 </div>
+
+<div id="dungeon-assist-status" class="assist-status" aria-live="polite" aria-atomic="true"></div>
 
 <div class="dungeon-container" id="dungeon-container">
     <div class="dungeon" id="dungeon"></div>
@@ -1158,10 +1174,102 @@ function classifyTile(x, y) {
     return 'floor';
 }
 
+function movementControlForStep(dx, dy) {
+    if (dx === 0 && dy === -1) return 'move up';
+    if (dx === 0 && dy === 1) return 'move down';
+    if (dx === -1 && dy === 0) return 'move left';
+    if (dx === 1 && dy === 0) return 'move right';
+    return null;
+}
+
+function firstSafeStepToward(dx, dy) {
+    const options = [];
+    if (Math.abs(dx) >= Math.abs(dy) && dx !== 0) options.push([Math.sign(dx), 0]);
+    if (dy !== 0) options.push([0, Math.sign(dy)]);
+    if (Math.abs(dx) < Math.abs(dy) && dx !== 0) options.push([Math.sign(dx), 0]);
+
+    for (const [sx, sy] of options) {
+        const type = classifyTile(player.x + sx, player.y + sy);
+        if (type !== 'wall' && type !== 'enemy' && type !== 'boss') return [sx, sy];
+    }
+    return null;
+}
+
+function getActionableTargets() {
+    const targets = [];
+    for (let dy = -4; dy <= 4; dy++) {
+        for (let dx = -4; dx <= 4; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = player.x + dx;
+            const ny = player.y + dy;
+            if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) continue;
+            if (!visible[ny][nx]) continue;
+            const offset = getRelativeOffset(dx, dy);
+
+            const enemy = enemies.find(e => e.x === nx && e.y === ny);
+            if (enemy) targets.push({ kind: 'enemy', label: `${enemy.name}(HP:${enemy.hp},ATK:${enemy.atk})`, offset, dx, dy, priority: 60 });
+
+            const item = items.find(i => i.x === nx && i.y === ny);
+            if (item) {
+                const priority = item.type === 'potion' && player.hp < player.maxHp ? 10
+                    : item.type === 'heartContainer' ? 15
+                    : item.type === 'shieldItem' ? 25
+                    : item.type === 'sword' ? 30
+                    : item.type === 'key' ? 35
+                    : 55;
+                targets.push({ kind: 'item', label: item.type, offset, dx, dy, priority });
+            }
+
+            const chest = chests.find(c => c.x === nx && c.y === ny);
+            if (chest && player.keys > 0) targets.push({ kind: 'chest', label: 'locked chest', offset, dx, dy, priority: 40 });
+
+            if (nx === stairsPos.x && ny === stairsPos.y) {
+                targets.push({ kind: 'stairs', label: 'Stairs to next floor', offset, dx, dy, priority: 45 });
+            }
+        }
+    }
+    return targets.sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        return (Math.abs(a.dx) + Math.abs(a.dy)) - (Math.abs(b.dx) + Math.abs(b.dy));
+    });
+}
+
+function getRecommendedAction() {
+    const adjacentEnemy = enemies.find(e => Math.abs(e.x - player.x) + Math.abs(e.y - player.y) <= 1);
+    if (adjacentEnemy) {
+        if (player.shield > 0 && !player.shieldActive && player.hp <= Math.ceil(player.maxHp * 0.45)) {
+            return `Recommended: adjacent ${adjacentEnemy.name}; tap "Activate shield ${player.shield} charges left" before fighting.`;
+        }
+        return `Recommended: adjacent ${adjacentEnemy.name}; tap "Attack nearby enemy".`;
+    }
+
+    const targets = getActionableTargets().filter(t => t.kind !== 'enemy');
+    for (const target of targets) {
+        const step = firstSafeStepToward(target.dx, target.dy);
+        if (!step) continue;
+        const control = movementControlForStep(step[0], step[1]);
+        if (control) return `Recommended: ${target.label} ${target.offset}; tap "${control}".`;
+    }
+
+    const dirs = [
+        ['N', 0, -1, 'move up'],
+        ['E', 1, 0, 'move right'],
+        ['S', 0, 1, 'move down'],
+        ['W', -1, 0, 'move left']
+    ];
+    const open = dirs.find(([,dx,dy]) => {
+        const type = classifyTile(player.x + dx, player.y + dy);
+        return type !== 'wall' && type !== 'enemy' && type !== 'boss';
+    });
+    if (open) return `Recommended: explore ${open[0]}; tap "${open[3]}".`;
+    return 'Recommended: no safe adjacent path; tap "Look around describe surroundings" or "wait".';
+}
+
 // --- Build game-state text for accessibility / ADB scraping ---
 function updateGameState() {
     const el = document.getElementById('game-state');
-    if (!el) return;
+    const assistEl = document.getElementById('dungeon-assist-status');
+    if (!el && !assistEl) return;
 
     const theme = getTheme(floor);
     const parts = [];
@@ -1255,9 +1363,13 @@ function updateGameState() {
     // Line 6: Game status
     if (!gameActive) {
         parts.push('STATUS: GAME OVER');
+    } else {
+        parts.push(getRecommendedAction());
     }
 
-    el.textContent = parts.join('\n');
+    const text = parts.join('\n');
+    if (el) el.textContent = text;
+    if (assistEl) assistEl.textContent = text;
 }
 
 function pickupItem(item) {
@@ -1335,8 +1447,10 @@ function showGameOver(won) {
     document.getElementById('go-gold').textContent = `Gold: ${player.gold}`;
     document.getElementById('go-enemies').textContent = `Enemies defeated: ${enemiesDefeated}`;
     // Set game-state to GAME OVER so heartbeat knows to tap New Game
-    document.getElementById('game-state').textContent =
-        `GAME OVER: ${won ? 'Victory!' : 'The fox falls...'} Reached Floor ${floor}, Gold ${player.gold}, ${enemiesDefeated} enemies defeated. Tap "New Game" to play again.`;
+    const statusText = `GAME OVER: ${won ? 'Victory!' : 'The fox falls...'} Reached Floor ${floor}, Gold ${player.gold}, ${enemiesDefeated} enemies defeated. Tap "New Game" to play again.`;
+    document.getElementById('game-state').textContent = statusText;
+    const assistEl = document.getElementById('dungeon-assist-status');
+    if (assistEl) assistEl.textContent = statusText;
 }
 
 function updateHighScore() {
@@ -1469,8 +1583,9 @@ document.addEventListener('keydown', (e) => {
                 document.querySelector('.controls').style.display = 'none';
                 document.querySelector('.actions-row').style.display = 'none';
                 // Set game-state to MENU so heartbeat knows to tap a button
-                document.getElementById('game-state').textContent =
-                    `MENU: Tap "Continue Run" to resume Floor ${save.floor} run (HP:${save.player.hp}/${save.player.maxHp}, Gold:${save.player.gold}) or tap "New Game" to start fresh.`;
+                const statusText = `MENU: Tap "Continue Run" to resume Floor ${save.floor} run (HP:${save.player.hp}/${save.player.maxHp}, Gold:${save.player.gold}) or tap "New Game" to start fresh.`;
+                document.getElementById('game-state').textContent = statusText;
+                document.getElementById('dungeon-assist-status').textContent = statusText;
                 return;
             }
         }
@@ -1478,9 +1593,9 @@ document.addEventListener('keydown', (e) => {
         localStorage.removeItem('fox-dungeon-save');
     }
     // No valid save — fresh start
+    addLog("A fox enters the dungeon...", 'floor');
     generateMap();
     render();
-    addLog("A fox enters the dungeon...", 'floor');
 })();
 
 // Show stats

@@ -33,6 +33,7 @@ Miru interacts ONLY through the Android accessibility tree. She uses:
 - **Sudoku:** after selecting an empty cell, `!type "4"` should place 4 directly. A successful move must change the Filled count; text merely appearing in `game-input` is not progress.
 - **Canvas:** pixels are already exposed as `"Pixel row R column C"` labels. Heartbeat should prefer `!tap` on those labels over visual `!click` coordinates.
 - **Chess:** restored games make opening-square assumptions unsafe. The assist status must list exact current piece labels, exact destination labels after selection, and the `"New Game"` escape hatch for a fresh opening.
+- **Dungeon:** visual `!look` is too vague for navigation. The assist status must expose exact `Paths`, `Nearby`, and `Recommended` text so heartbeat can use `!screen` before choosing a D-pad direction.
 
 ## What To Work On
 
