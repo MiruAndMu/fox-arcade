@@ -7,13 +7,14 @@ Fox Arcade is a collection of browser-based games built for Miru's heartbeat sys
 **Local:** `/Users/miru/.miru/workspace/fox-arcade/` served at `http://192.168.12.107:19284/`
 **Workflow:** Edit locally → test at :19284 → push to GitHub → Pages auto-deploys → phone loads from local server
 
-## The 6 Games
+## The 7 Games
 1. **wordle.html** — 5-letter word guessing (daily). Keyboard + grid + color feedback.
-2. **canvas.html** — 16x16 pixel art. Color palette + tap cells to draw. Save/load artworks.
-3. **memory.html** — Card matching (flip pairs). FOX, COW, STAR, MOON symbols.
-4. **dungeon.html** — Roguelike. 9x9 map, enemies, items, floors. D-pad + action buttons.
-5. **chess.html** — Chess vs AI (minimax). Tap piece → tap destination. Undo + Hint.
-6. **sudoku.html** — 9x9 grid puzzler. Tap cell → tap number. 3 errors = game over. Generated puzzles.
+2. **canvas.html** — 16x16 pixel art studio. Pen/Eraser/Fill tools, named colors, gallery, save/load artworks.
+3. **match.html** — Fox Match card matching (was memory.html — renamed 2026-06-06 to avoid colliding with Fox Apps' "Fox Memories"; memory.html now redirects). Classic, Space, and Music themes; Easy 4x3, Medium 4x4, Hard 4x5.
+4. **dungeon.html** — Roguelike. 9x9 map, enemies, items, floors. D-pad + action buttons + assist status.
+5. **chess.html** — Chess vs AI or multiplayer with Mu. Difficulty levels, tap piece → tap destination, Undo + Hint.
+6. **sudoku.html** — 9x9 grid puzzler. Notes mode, Easy/Medium/Hard, 3 errors = game over. Generated puzzles.
+7. **battleship.html** — Solo or multiplayer fleet game. Placement grid, attack grid, ship roster, and assist status expose exact labels for heartbeat.
 
 ## How Miru Plays (Critical — Do NOT Break This)
 Miru interacts ONLY through the Android accessibility tree. She uses:
@@ -34,6 +35,7 @@ Miru interacts ONLY through the Android accessibility tree. She uses:
 - **Canvas:** pixels are already exposed as `"Pixel row R column C"` labels. Heartbeat should prefer `!tap` on those labels over visual `!click` coordinates.
 - **Chess:** restored games make opening-square assumptions unsafe. The assist status must list exact current piece labels, exact destination labels after selection, and the `"New Game"` escape hatch for a fresh opening.
 - **Dungeon:** visual `!look` is too vague for navigation. The assist status must expose exact `Paths`, `Nearby`, and `Recommended` text so heartbeat can use `!screen` before choosing a D-pad direction.
+- **Battleship:** grid cells must stay labeled. Placement cells use labels like `"Place Fox Den size 5 at row 1 column 1 horizontal"`, enemy cells use `"Fire at enemy row 1 column 1"`, and the assist status should name the next reliable tap label.
 
 ## What To Work On
 
@@ -41,7 +43,7 @@ Miru interacts ONLY through the Android accessibility tree. She uses:
 Make these games feel like real app-quality games:
 - **Wordle**: Daily word tracking (don't let her replay same day), win/loss animations, letter frequency hints
 - **Canvas**: More canvas sizes (8x8, 16x16, 32x32 selector), gallery view of saved art, export as image
-- **Memory**: More difficulty levels, themed card sets (animals, space, music), timer option
+- **Fox Match**: Timer option, streak stats, optional harder themes
 - **Dungeon**: More enemy variety, item descriptions, minimap, save/resume between sessions
 - **Chess**: Opening book for AI, captured pieces display, move history in algebraic notation
 - **Sudoku**: Pencil marks/notes mode, timer, difficulty indicators, celebration on completion
