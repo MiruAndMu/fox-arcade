@@ -39,6 +39,20 @@ h1 {
     font-weight: bold;
 }
 
+.assist {
+    width: min(92vw, 360px);
+    min-height: 38px;
+    margin: 2px 0 6px;
+    padding: 8px 10px;
+    border: 1px solid #1a3a60;
+    border-radius: 8px;
+    background: rgba(15, 52, 96, 0.22);
+    color: #9eb4ca;
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: center;
+}
+
 /* Grid */
 .grid {
     display: grid;
@@ -199,6 +213,7 @@ h1 {
 <div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">Back to Arcade</a></div>
 <h1>Fox Wordle</h1>
 <div class="message" id="message" aria-live="polite"></div>
+<div class="assist" id="assist" aria-live="polite"></div>
 
 <div class="grid" id="grid"></div>
 
@@ -1455,6 +1470,13 @@ const WORDS = [
     "zosma","zowie","zudda","zygal","zygon","zymic","zymin"
 ];
 
+const SUPPLEMENTAL_GUESSES = [
+    // Common, legitimate guesses missing from the broad list; observed heartbeat
+    // looping on these as rejected words during the 2026-07-01 puzzle.
+    "hinds", "hints"
+];
+const VALID_WORDS = new Set([...WORDS, ...ANSWERS, ...SUPPLEMENTAL_GUESSES]);
+
 // --- Game state ---
 let answer = '';
 let currentRow = 0;
@@ -1462,6 +1484,7 @@ let currentCol = 0;
 let gameOver = false;
 let isAnimating = false;
 let guesses = [];
+let guessHistory = [];
 let rejectedWords = [];
 let messageTimer = null;
 
@@ -1529,6 +1552,7 @@ function handleKey(key) {
             cell.setAttribute('aria-label', `Row ${currentRow + 1} Column ${currentCol + 1} Empty`);
         }
         showMessage('Row cleared', 2000);
+        updateAssist('Row cleared');
     } else if (key === 'DEL') {
         if (currentCol > 0) {
             currentCol--;
@@ -1536,6 +1560,7 @@ function handleKey(key) {
             cell.textContent = '';
             cell.className = 'cell';
             cell.setAttribute('aria-label', `Row ${currentRow + 1} Column ${currentCol + 1} Empty`);
+            updateAssist();
         }
     } else if (key === 'ENTER') {
         if (currentCol === 5) submitGuess();
@@ -1553,6 +1578,7 @@ function handleKey(key) {
             cell.style.animation = 'cellPop 0.12s ease-out';
         }));
         currentCol++;
+        updateAssist();
     }
 }
 
@@ -1563,13 +1589,14 @@ function submitGuess() {
         guess += document.getElementById(`cell-${currentRow}-${c}`).textContent;
     }
 
-    if (!WORDS.includes(guess.toLowerCase())) {
+    if (!VALID_WORDS.has(guess.toLowerCase())) {
         const alreadyTried = rejectedWords.includes(guess);
         if (!alreadyTried) {
             rejectedWords.push(guess);
         }
         // Persistent message — stays until next keypress (no auto-clear timer)
         showMessage(alreadyTried ? `${guess} is not a word — try something different` : `${guess} not in word list — row cleared`);
+        updateAssist(`${guess} rejected`);
         shakeRow(currentRow);
         // Auto-clear the row after shake so player can try again fresh
         setTimeout(() => {
@@ -1578,6 +1605,7 @@ function submitGuess() {
                 document.getElementById(`cell-${currentRow}-${c}`).setAttribute('aria-label', `Row ${currentRow + 1} Column ${c + 1} Empty`);
             }
             currentCol = 0;
+            updateAssist(`${guess} rejected; row empty`);
         }, 600);
         return;
     }
@@ -1586,6 +1614,7 @@ function submitGuess() {
     isAnimating = true;
 
     const result = scoreGuess(guess, answer);
+    guessHistory.push({ guess, result });
     const row = currentRow;
 
     revealRow(row, result, guess, () => {
@@ -1596,13 +1625,16 @@ function submitGuess() {
             showMessage(msgs[row + 1] || 'You got it!', null, true);
             celebrateWin(row);
             updateStats(true, row + 1);
+            updateAssist('Puzzle solved');
         } else if (row === 5) {
             gameOver = true;
             showMessage(`The word was ${answer}`);
             updateStats(false, 0);
+            updateAssist('Puzzle complete');
         } else {
             currentRow++;
             currentCol = 0;
+            updateAssist();
         }
     });
 }
@@ -1718,6 +1750,89 @@ function scoreGuess(guess, answer) {
     return result;
 }
 
+function currentGuessText() {
+    let guess = '';
+    for (let c = 0; c < 5; c++) {
+        guess += document.getElementById(`cell-${currentRow}-${c}`)?.textContent || '';
+    }
+    return guess;
+}
+
+function resultMarks(result) {
+    return result.map(r => r === 'correct' ? 'green' : r === 'present' ? 'yellow' : 'gray');
+}
+
+function knownSummary() {
+    const greens = Array(5).fill(null);
+    const present = new Set();
+    const absent = new Set();
+    guessHistory.forEach(({ guess, result }) => {
+        result.forEach((r, i) => {
+            if (r === 'correct') greens[i] = guess[i];
+            else if (r === 'present') present.add(guess[i]);
+            else absent.add(guess[i]);
+        });
+    });
+    greens.forEach(ch => {
+        if (ch) {
+            present.delete(ch);
+            absent.delete(ch);
+        }
+    });
+    present.forEach(ch => absent.delete(ch));
+    const greenText = greens
+        .map((ch, i) => ch ? `${i + 1}:${ch}` : null)
+        .filter(Boolean)
+        .join(' ');
+    const yellowText = [...present].sort().join(' ');
+    const grayText = [...absent].sort().join(' ');
+    const parts = [];
+    if (greenText) parts.push(`green ${greenText}`);
+    if (yellowText) parts.push(`yellow ${yellowText}`);
+    if (grayText) parts.push(`gray ${grayText}`);
+    return parts.join('; ');
+}
+
+function candidateMatches(word) {
+    const candidate = word.toUpperCase();
+    return guessHistory.every(({ guess, result }) => {
+        const scored = scoreGuess(guess, candidate);
+        return scored.every((r, i) => r === result[i]);
+    });
+}
+
+function candidateSummary() {
+    if (guessHistory.length === 0) return '';
+    const candidates = ANSWERS.filter(candidateMatches).map(w => w.toUpperCase());
+    if (candidates.length === 0) return 'common answers left: 0';
+    const lateGame = currentRow >= 4 || rejectedWords.length > 0 || gameOver;
+    if (lateGame && candidates.length <= 6) {
+        return `common answers left: ${candidates.join(', ')}`;
+    }
+    return `common answers left: ${candidates.length}`;
+}
+
+function updateAssist(note = '') {
+    const el = document.getElementById('assist');
+    if (!el) return;
+    const rowText = gameOver
+        ? 'Game complete'
+        : `Guess ${Math.min(currentRow + 1, 6)} of 6`;
+    const current = !gameOver ? currentGuessText() : '';
+    const rowState = current
+        ? `${rowText} · row ${current.length === 5 ? 'ready' : 'editing'}: ${current}`
+        : `${rowText} · row empty`;
+    const submitted = guessHistory.length
+        ? `submitted: ${guessHistory.map(({ guess, result }) => `${guess} (${resultMarks(result).join('/')})`).join(' · ')}`
+        : '';
+    const known = knownSummary();
+    const candidates = candidateSummary();
+    const rejected = rejectedWords.length ? `rejected: ${rejectedWords.join(', ')}` : '';
+    el.textContent = [note, rowState, known, candidates, rejected, submitted]
+        .filter(Boolean)
+        .join(' | ');
+}
+
 function showMessage(msg, autoClearMs, animated) {
     if (messageTimer) clearTimeout(messageTimer);
     const el = document.getElementById('message');
@@ -1789,6 +1904,7 @@ answer = getDailyWord();
 buildGrid();
 buildKeyboard();
 showStats();
+updateAssist();
 </script>
 
 </body>
