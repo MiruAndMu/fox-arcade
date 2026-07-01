@@ -192,6 +192,20 @@ body.multiplayer-entry .solo-entry { display: none; }
     margin: 4px 0;
 }
 
+.assist-status {
+    width: 100%;
+    max-width: 340px;
+    padding: 8px 10px;
+    margin: 6px 0;
+    border: 1px solid rgba(244, 132, 95, 0.32);
+    border-radius: 8px;
+    background: rgba(15, 52, 96, 0.18);
+    color: #d9dee6;
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: left;
+}
+
 /* === TURN INDICATOR === */
 .turn-bar {
     width: 100%;
@@ -242,7 +256,7 @@ body.multiplayer-entry .solo-entry { display: none; }
 </head>
 <body>
 
-<div class="nav"><a href="index.html">← Back to Arcade</a></div>
+<div class="nav"><a href="index.html" aria-label="Back to Fox Arcade">← Back to Arcade</a></div>
 <h1>🚢 Fox Battleship</h1>
 
 <!-- MENU SCREEN -->
@@ -250,9 +264,9 @@ body.multiplayer-entry .solo-entry { display: none; }
     <p id="menu-subtitle" style="color:#7f8c8d; margin: 12px 0; text-align:center; font-size:13px;">
         Place your fleet. Sink theirs first. 🦊
     </p>
-    <button class="menu-btn solo-entry" onclick="startSolo()">🎯 Solo Mission</button>
-    <button class="menu-btn" onclick="showCreate()">🔗 Create Room</button>
-    <button class="menu-btn" onclick="showJoin()">🚪 Join Room</button>
+    <button class="menu-btn solo-entry" aria-label="Solo Mission" onclick="startSolo()">🎯 Solo Mission</button>
+    <button class="menu-btn" aria-label="Create Room" onclick="showCreate()">🔗 Create Room</button>
+    <button class="menu-btn" aria-label="Join Room" onclick="showJoin()">🚪 Join Room</button>
 </div>
 
 <!-- CREATE ROOM SCREEN -->
@@ -260,16 +274,16 @@ body.multiplayer-entry .solo-entry { display: none; }
     <p style="color:#7f8c8d; margin: 8px 0; font-size:13px;">Share this code:</p>
     <div id="room-code-display" class="room-code">...</div>
     <div id="create-status" class="status">Waiting for opponent...</div>
-    <button class="menu-btn small" onclick="backToMenu()">Cancel</button>
+    <button class="menu-btn small" aria-label="Cancel" onclick="backToMenu()">Cancel</button>
 </div>
 
 <!-- JOIN ROOM SCREEN -->
 <div id="join-screen" class="screen">
     <p style="color:#7f8c8d; margin: 8px 0; font-size:13px;">Enter room code:</p>
-    <input id="room-input" class="room-input" maxlength="6" placeholder="------" autocomplete="off" spellcheck="false">
-    <button class="menu-btn small" style="margin-top:10px" onclick="joinRoom()">Join</button>
+    <input id="room-input" class="room-input" maxlength="6" placeholder="------" autocomplete="off" spellcheck="false" aria-label="Room code input">
+    <button class="menu-btn small" style="margin-top:10px" aria-label="Join" onclick="joinRoom()">Join</button>
     <div id="join-status" class="status"></div>
-    <button class="menu-btn small" onclick="backToMenu()">Back</button>
+    <button class="menu-btn small" aria-label="Back" onclick="backToMenu()">Back</button>
 </div>
 
 <!-- PLACEMENT SCREEN -->
@@ -277,12 +291,13 @@ body.multiplayer-entry .solo-entry { display: none; }
     <div class="grid-label">Place Your Fleet</div>
     <div class="ship-roster" id="ship-roster"></div>
     <div class="hint" id="place-hint">Tap a ship, then tap the grid. Tap ship again to rotate.</div>
+    <div class="assist-status" id="place-assist-status" aria-live="polite" aria-atomic="true"></div>
     <div class="grid-container">
         <div class="grid" id="place-grid"></div>
     </div>
     <div class="controls">
-        <button class="menu-btn small" id="random-btn" onclick="randomPlace()">🎲 Random</button>
-        <button class="menu-btn small" id="ready-btn" onclick="confirmPlacement()" style="display:none">✅ Ready!</button>
+        <button class="menu-btn small" id="random-btn" aria-label="Random" onclick="randomPlace()">🎲 Random</button>
+        <button class="menu-btn small" id="ready-btn" aria-label="Ready" onclick="confirmPlacement()" style="display:none">✅ Ready!</button>
     </div>
 </div>
 
@@ -293,6 +308,7 @@ body.multiplayer-entry .solo-entry { display: none; }
         <span><span class="label">Theirs: </span><span class="count" id="their-remaining">5</span></span>
         <span><span class="label">Yours: </span><span class="count" id="your-remaining">5</span></span>
     </div>
+    <div class="assist-status" id="battle-assist-status" aria-live="polite" aria-atomic="true"></div>
     <div class="grid-label">🎯 Enemy Waters</div>
     <div class="grid-container">
         <div class="grid" id="attack-grid"></div>
@@ -307,7 +323,7 @@ body.multiplayer-entry .solo-entry { display: none; }
 <div id="over-screen" class="screen">
     <div id="over-message" class="status win" style="font-size:22px; margin:20px 0;"></div>
     <div id="over-stats" style="color:#7f8c8d; font-size:13px; text-align:center; margin:8px 0;"></div>
-    <button class="menu-btn" onclick="backToMenu()">Play Again</button>
+    <button class="menu-btn" aria-label="Play Again" onclick="backToMenu()">Play Again</button>
 </div>
 
 <script>
@@ -349,6 +365,139 @@ let aiQueue = [];      // cells AI wants to try next
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+}
+
+function positionLabel(r, c) {
+    return `row ${r + 1} column ${c + 1}`;
+}
+
+function shipLabel(ship) {
+    return `${ship.name} size ${ship.size}`;
+}
+
+function shipRosterLabel(i) {
+    const ship = SHIPS[i];
+    if (placedShips.includes(i)) {
+        return `${shipLabel(ship)} already placed`;
+    }
+    if (selectedShipIdx === i) {
+        const current = shipDirection === 'h' ? 'horizontal' : 'vertical';
+        const next = shipDirection === 'h' ? 'vertical' : 'horizontal';
+        return `${shipLabel(ship)} selected ${current}; tap again to rotate ${next}`;
+    }
+    return `Select ${shipLabel(ship)}`;
+}
+
+function placementCellLabel(r, c) {
+    const pos = positionLabel(r, c);
+    if (myBoard[r][c] > 0) {
+        return `Placement ${pos} occupied by ${shipLabel(SHIPS[myBoard[r][c] - 1])}`;
+    }
+    if (selectedShipIdx === null) {
+        return `Placement ${pos} empty; select a ship first`;
+    }
+    const ship = SHIPS[selectedShipIdx];
+    const dir = shipDirection === 'h' ? 'horizontal' : 'vertical';
+    const cells = getShipCells(r, c, ship.size, shipDirection);
+    if (!cells || !canPlace(cells)) {
+        return `Cannot place ${shipLabel(ship)} at ${pos} ${dir}`;
+    }
+    return `Place ${shipLabel(ship)} at ${pos} ${dir}`;
+}
+
+function attackCellLabel(r, c) {
+    const pos = positionLabel(r, c);
+    const val = enemyBoard[r][c];
+    if (val === 'hit') return `Enemy waters ${pos} hit`;
+    if (val === 'miss') return `Enemy waters ${pos} miss`;
+    if (val === 'sunk') return `Enemy waters ${pos} sunk`;
+    if (gameOver) return `Enemy waters ${pos} unknown; game over`;
+    if (!myTurn) return `Enemy waters ${pos} unknown; wait for your turn`;
+    return `Fire at enemy ${pos}`;
+}
+
+function defenseCellLabel(r, c) {
+    const pos = positionLabel(r, c);
+    const hitVal = myHits[r][c];
+    const ship = myBoard[r][c] > 0 ? SHIPS[myBoard[r][c] - 1] : null;
+    if (hitVal === 'miss') return `Enemy missed your ${pos}`;
+    if (hitVal === 'hit') return ship ? `Your ${shipLabel(ship)} at ${pos} hit` : `Your ${pos} hit`;
+    if (hitVal === 'sunk') return ship ? `Your ${shipLabel(ship)} at ${pos} sunk` : `Your ${pos} sunk`;
+    if (ship) return `Your ${shipLabel(ship)} at ${pos} intact`;
+    return `Your ${pos} empty`;
+}
+
+function makeKeyboardActivatable(el, handler) {
+    el.setAttribute('role', 'button');
+    el.tabIndex = 0;
+    el.onkeydown = (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handler();
+        }
+    };
+}
+
+function firstAvailableFireLabel() {
+    for (let r = 0; r < GRID; r++) {
+        for (let c = 0; c < GRID; c++) {
+            if (enemyBoard[r][c] === 0) return attackCellLabel(r, c);
+        }
+    }
+    return 'no unknown enemy waters left';
+}
+
+function firstAvailablePlacementLabel() {
+    for (let r = 0; r < GRID; r++) {
+        for (let c = 0; c < GRID; c++) {
+            const label = placementCellLabel(r, c);
+            if (label.startsWith('Place ')) return label;
+        }
+    }
+    return placementCellLabel(0, 0);
+}
+
+function updatePlaceAssistStatus() {
+    const el = document.getElementById('place-assist-status');
+    if (!el) return;
+    const remaining = SHIPS
+        .map((ship, i) => ({ ship, i }))
+        .filter(({ i }) => !placedShips.includes(i));
+
+    if (remaining.length === 0) {
+        const readyHidden = document.getElementById('ready-btn')?.style.display === 'none';
+        const randomHidden = document.getElementById('random-btn')?.style.display === 'none';
+        if (readyHidden && randomHidden) {
+            el.textContent = 'Placement: your fleet is ready. Waiting for opponent.';
+            return;
+        }
+        el.textContent = 'Placement: all ships placed. Tap "Ready" to begin.';
+        return;
+    }
+
+    if (selectedShipIdx === null) {
+        el.textContent = `Placement: select a ship. Remaining: ${remaining.map(({ ship }) => shipLabel(ship)).join(', ')}. Optional shortcut: tap "Random".`;
+        return;
+    }
+
+    const ship = SHIPS[selectedShipIdx];
+    const dir = shipDirection === 'h' ? 'horizontal' : 'vertical';
+    const sample = firstAvailablePlacementLabel();
+    el.textContent = `Placement: selected ${shipLabel(ship)} ${dir}. Tap a grid label like "${sample}", or tap "${shipRosterLabel(selectedShipIdx)}" to rotate. Remaining: ${remaining.map(({ ship: s }) => shipLabel(s)).join(', ')}.`;
+}
+
+function updateBattleAssistStatus() {
+    const el = document.getElementById('battle-assist-status');
+    if (!el) return;
+    const theirs = document.getElementById('their-remaining')?.textContent || SHIPS.length;
+    const yours = document.getElementById('your-remaining')?.textContent || SHIPS.length;
+    if (gameOver) {
+        el.textContent = `Battle: game over. Fleets remaining: enemy ${theirs}, yours ${yours}.`;
+    } else if (myTurn) {
+        el.textContent = `Battle: your turn. Fleets remaining: enemy ${theirs}, yours ${yours}. Tap an enemy-water label like "${firstAvailableFireLabel()}".`;
+    } else {
+        el.textContent = `Battle: waiting. Fleets remaining: enemy ${theirs}, yours ${yours}. Do not fire until the turn bar says your turn.`;
+    }
 }
 
 function backToMenu() {
@@ -473,6 +622,7 @@ function initPlacement() {
     renderShipRoster();
     renderPlaceGrid();
     document.getElementById('ready-btn').style.display = 'none';
+    document.getElementById('random-btn').style.display = '';
     document.getElementById('place-hint').textContent = 'Tap a ship, then tap the grid. Tap ship again to rotate.';
 }
 
@@ -483,7 +633,7 @@ function renderShipRoster() {
         const tag = document.createElement('div');
         tag.className = 'ship-tag' + (placedShips.includes(i) ? ' placed' : '') + (selectedShipIdx === i ? ' active' : '');
         tag.textContent = `${ship.emoji} ${ship.name} (${ship.size})`;
-        tag.onclick = () => {
+        const selectShip = () => {
             if (placedShips.includes(i)) return;
             if (selectedShipIdx === i) {
                 shipDirection = shipDirection === 'h' ? 'v' : 'h';
@@ -495,8 +645,12 @@ function renderShipRoster() {
             document.getElementById('place-hint').textContent =
                 `Placing ${ship.emoji} ${ship.name} (${ship.size}) — ${shipDirection === 'h' ? 'horizontal' : 'vertical'}. Tap again to rotate.`;
         };
+        tag.setAttribute('aria-label', shipRosterLabel(i));
+        tag.onclick = selectShip;
+        makeKeyboardActivatable(tag, selectShip);
         roster.appendChild(tag);
     });
+    updatePlaceAssistStatus();
 }
 
 function renderPlaceGrid() {
@@ -511,11 +665,15 @@ function renderPlaceGrid() {
                 const shipIdx = myBoard[r][c] - 1;
                 cell.textContent = SHIPS[shipIdx].emoji;
             }
-            cell.onclick = () => placeShipAt(r, c);
+            const placeHere = () => placeShipAt(r, c);
+            cell.setAttribute('aria-label', placementCellLabel(r, c));
+            cell.onclick = placeHere;
+            makeKeyboardActivatable(cell, placeHere);
             cell.onmouseenter = () => previewShip(r, c);
             grid.appendChild(cell);
         }
     }
+    updatePlaceAssistStatus();
 }
 
 function previewShip(r, c) {
@@ -586,6 +744,7 @@ function placeShipAt(r, c) {
         document.getElementById('place-hint').textContent =
             `Placing ${next.emoji} ${next.name} (${next.size}) — ${shipDirection === 'h' ? 'horizontal' : 'vertical'}`;
     }
+    updatePlaceAssistStatus();
 }
 
 function randomPlace() {
@@ -617,6 +776,7 @@ function randomPlace() {
         document.getElementById('ready-btn').style.display = '';
         document.getElementById('place-hint').textContent = 'All ships placed! Hit Ready when set.';
     }
+    updatePlaceAssistStatus();
 }
 
 function buildMyShips() {
@@ -640,6 +800,7 @@ function confirmPlacement() {
         document.getElementById('place-hint').textContent = 'Waiting for opponent...';
         document.getElementById('ready-btn').style.display = 'none';
         document.getElementById('random-btn').style.display = 'none';
+        updatePlaceAssistStatus();
     }
 }
 
@@ -714,6 +875,7 @@ function startBattle() {
     renderDefenseGrid();
     updateTurnBar();
     updateFleetCounts();
+    updateBattleAssistStatus();
 }
 
 // === BATTLE RENDERING ===
@@ -737,10 +899,14 @@ function renderAttackGrid() {
             } else if (myTurn && !gameOver) {
                 cell.className += ' target';
             }
-            cell.onclick = () => fireAt(r, c);
+            const fireHere = () => fireAt(r, c);
+            cell.setAttribute('aria-label', attackCellLabel(r, c));
+            cell.onclick = fireHere;
+            makeKeyboardActivatable(cell, fireHere);
             grid.appendChild(cell);
         }
     }
+    updateBattleAssistStatus();
 }
 
 function renderDefenseGrid() {
@@ -764,9 +930,12 @@ function renderDefenseGrid() {
                 cell.className += ' ship';
                 cell.textContent = SHIPS[myBoard[r][c] - 1].emoji;
             }
+            cell.setAttribute('role', 'img');
+            cell.setAttribute('aria-label', defenseCellLabel(r, c));
             grid.appendChild(cell);
         }
     }
+    updateBattleAssistStatus();
 }
 
 function updateTurnBar() {
@@ -779,6 +948,7 @@ function updateTurnBar() {
         bar.textContent = mode === 'solo' ? '🤖 AI thinking...' : '⏳ Opponent\'s turn...';
         bar.className = 'turn-bar their-turn';
     }
+    updateBattleAssistStatus();
 }
 
 function updateFleetCounts() {
@@ -788,6 +958,7 @@ function updateFleetCounts() {
     const mySunk = myShips.filter(s => s.sunk).length;
     document.getElementById('their-remaining').textContent = (SHIPS.length - theirSunk);
     document.getElementById('your-remaining').textContent = (SHIPS.length - mySunk);
+    updateBattleAssistStatus();
 }
 
 function countSunkFromBoard(board) {
@@ -1044,6 +1215,7 @@ confirmPlacement = function() {
         document.getElementById('place-hint').textContent = 'Waiting for opponent...';
         document.getElementById('ready-btn').style.display = 'none';
         document.getElementById('random-btn').style.display = 'none';
+        updatePlaceAssistStatus();
         if (opponentReady) startMultiBattle();
     }
 };
